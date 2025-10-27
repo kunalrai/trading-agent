@@ -1,0 +1,21 @@
+<!-- Sidebar Navigation Template -->
+<nav class="mt-10 flex flex-col items-center gap-y-8">
+    <a class="text-white/60 hover:text-primary transition-colors" href="/" title="Home">
+        <span class="material-symbols-outlined text-3xl">home</span>
+    </a>
+    <a class="text-{% if request.endpoint == 'coin_detail' %}primary{% else %}white/60 hover:text-primary{% endif %} transition-colors" href="#" title="Chart">
+        <span class="material-symbols-outlined text-3xl">candlestick_chart</span>
+    </a>
+    <a class="text-white/60 hover:text-primary transition-colors" href="/dashboard" title="Dashboard">
+        <span class="material-symbols-outlined text-3xl">dashboard</span>
+    </a>
+    <a class="text-white/60 hover:text-primary transition-colors" href="/scanner" title="Scanner">
+        <span class="material-symbols-outlined text-3xl">search</span>
+    </a>
+    <a class="text-white/60 hover:text-primary transition-colors" href="/alerts" title="Alerts">
+        <span class="material-symbols-outlined text-3xl">notifications</span>
+    </a>
+    <a class="text-white/60 hover:text-primary transition-colors" href="/settings" title="Settings">
+        <span class="material-symbols-outlined text-3xl">settings</span>
+    </a>
+</nav>

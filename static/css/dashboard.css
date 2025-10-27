@@ -1,0 +1,531 @@
+/* SolSignals Dashboard Styles */
+
+body {
+    background-color: #0f1419;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.dark-card {
+    background-color: #1a1f2e;
+    border: 1px solid #2d3748;
+}
+
+.chart-container {
+    position: relative;
+    height: 400px;  /* Increased from 200px for better visibility */
+    width: 100%;
+}
+
+.chart-container-main {
+    position: relative;
+    height: 500px;  /* Extra large for main price chart */
+    width: 100%;
+}
+
+canvas {
+    position: absolute !important;
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.metric-card {
+    background: linear-gradient(145deg, #1a1f2e, #151a26);
+    border: 1px solid #2d3748;
+}
+
+.glass-button {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    -webkit-backdrop-filter: blur(10px); /* Safari support */
+    backdrop-filter: blur(10px);
+}
+
+.glass-button:hover {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.alert-input {
+    background: #1a1f2e;
+    border: 1px solid #374151;
+    color: #f9fafb;
+}
+
+.alert-input:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1f2e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+    .chart-container {
+        height: 300px;  /* Increased from 150px for mobile visibility */
+    }
+    
+    .chart-container-main {
+        height: 350px;  /* Responsive height for main chart on mobile */
+    }
+    
+    .metric-card {
+        padding: 1rem;
+    }
+    
+    .glass-button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Animation classes */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.pulse-green {
+    animation: pulseGreen 2s infinite;
+}
+
+.pulse-red {
+    animation: pulseRed 2s infinite;
+}
+
+.pulse-blue {
+    animation: pulseBlue 2s infinite;
+}
+
+@keyframes pulseGreen {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+
+@keyframes pulseRed {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+
+@keyframes pulseBlue {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+}
+
+/* Status indicators */
+.status-active {
+    background: linear-gradient(135deg, #10b981, #059669);
+    animation: pulseGreen 2s infinite;
+}
+
+.status-waiting {
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
+/* Improved focus states */
+.glass-button:focus,
+.alert-input:focus {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* Loading states */
+.loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    to { left: 100%; }
+}
+
+/* Tab Navigation Styles */
+.tab-button {
+    transition: all 0.3s ease;
+}
+
+.tab-button.active {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.tab-button:not(.active):hover {
+    background-color: rgba(75, 85, 99, 0.5);
+    color: white;
+}
+
+.tab-content {
+    transition: opacity 0.3s ease;
+}
+
+.tab-content.hidden {
+    display: none;
+}
+
+/* Scanner Specific Styles */
+.symbol-chip {
+    background: linear-gradient(145deg, #1f2937, #111827);
+    border: 1px solid #374151;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.symbol-chip:hover {
+    border-color: #3b82f6;
+    background: linear-gradient(145deg, #1e3a8a, #1f2937);
+}
+
+.symbol-chip .remove-btn {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: none;
+    border-radius: 50%;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.symbol-chip .remove-btn:hover {
+    background: rgba(239, 68, 68, 0.4);
+    color: #ffffff;
+}
+
+/* Signal Type Colors */
+.signal-bullish {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+}
+
+.signal-bearish {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+}
+
+.signal-neutral {
+    color: #6b7280;
+    background: rgba(107, 114, 128, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+}
+
+/* Strength Indicators */
+.strength-high {
+    color: #10b981;
+    font-weight: 700;
+}
+
+.strength-medium {
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+.strength-low {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Scanner Status */
+.scanner-running {
+    background-color: #10b981;
+    animation: pulseGreen 2s infinite;
+}
+
+.scanner-stopped {
+    background-color: #ef4444;
+}
+
+/* Main Navigation Styles */
+.nav-button {
+    transition: all 0.3s ease;
+}
+
+.nav-button.active {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.nav-button:not(.active):hover {
+    background-color: rgba(75, 85, 99, 0.5);
+    color: white;
+}
+
+/* Main View Styles */
+.main-view {
+    transition: opacity 0.3s ease;
+}
+
+.main-view.hidden {
+    display: none;
+}
+
+/* CoinDCX-Style Breakout Scanner */
+.breakout-table-container {
+    background: #1f2937;
+    border: 1px solid #374151;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.breakout-table-container table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.breakout-table-container th {
+    background: #374151;
+    font-weight: 500;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #4b5563;
+}
+
+.breakout-table-container td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #374151;
+    transition: background-color 0.2s ease;
+}
+
+.breakout-table-container tbody tr:hover {
+    background-color: #374151;
+}
+
+.breakout-table-container tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Rank Column Styling */
+.rank-cell {
+    font-weight: 600;
+    color: #9ca3af;
+    font-size: 0.875rem;
+}
+
+/* Crypto Name Styling */
+.crypto-name {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.crypto-symbol {
+    font-weight: 600;
+    color: #ffffff;
+    font-size: 0.95rem;
+}
+
+.crypto-full-name {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    font-weight: 400;
+}
+
+/* Price Styling */
+.price-cell {
+    font-weight: 600;
+    color: #ffffff;
+    font-family: 'Courier New', monospace;
+}
+
+/* Change Percentage Styling */
+.change-positive {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.change-negative {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.change-neutral {
+    color: #6b7280;
+    font-weight: 600;
+}
+
+/* Breakout Badge Styling */
+.breakout-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.breakout-badge.bullish {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.breakout-badge.bearish {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.breakout-badge.neutral {
+    background-color: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+    border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+.breakout-badge.volume {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Scanner Statistics Cards */
+.scanner-stat-card {
+    background: linear-gradient(145deg, #374151, #1f2937);
+    border: 1px solid #4b5563;
+    transition: all 0.3s ease;
+}
+
+.scanner-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Scanner Select Styling */
+.scanner-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    appearance: none;
+}
+
+.scanner-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Volume Ratio Styling */
+.volume-ratio {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+.volume-high {
+    color: #f59e0b;
+}
+
+.volume-medium {
+    color: #3b82f6;
+}
+
+.volume-low {
+    color: #6b7280;
+}
+
+/* Signal Strength Bar */
+.strength-bar {
+    width: 100%;
+    height: 0.5rem;
+    background-color: #374151;
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+.strength-fill {
+    height: 100%;
+    border-radius: 0.25rem;
+    transition: width 0.3s ease;
+}
+
+.strength-fill.high {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.strength-fill.medium {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.strength-fill.low {
+    background: linear-gradient(90deg, #6b7280, #4b5563);
+}
+
+/* Time Display */
+.time-display {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    font-family: 'Courier New', monospace;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .breakout-table-container {
+        font-size: 0.875rem;
+    }
+    
+    .breakout-table-container td {
+        padding: 0.75rem 1rem;
+    }
+    
+    .crypto-name {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .breakout-table-container td {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .breakout-badge {
+        font-size: 0.625rem;
+        padding: 0.25rem 0.5rem;
+    }
+}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}SolSignals - Login{% endblock %}
+
+{% block content %}
+<div class="flex flex-1 justify-center items-center p-4">
+    <div class="w-full max-w-md">
+        <div class="flex flex-col items-center mb-8">
+            <div class="flex items-center gap-4 text-white mb-2">
+                <div class="size-8 text-primary">
+                    <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-white text-3xl font-bold leading-tight tracking-[-0.015em]">SolSignals</h2>
+            </div>
+            <p class="text-[#9db0b9] text-lg font-normal leading-normal">Welcome back! Please login to your account.</p>
+        </div>
+        
+        <div class="bg-[#1a1a1a]/60 rounded-xl p-8 shadow-lg">
+            <form class="space-y-6">
+                <div>
+                    <label class="block text-white/80 text-sm font-medium mb-2" for="email">Username or Email</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/50">person</span>
+                        <input autocomplete="email" class="w-full bg-[#283339] border-none rounded-lg text-white pl-10 pr-4 py-3 focus:ring-2 focus:ring-primary placeholder:text-white/40" id="email" name="email" placeholder="you@example.com" required="" type="email"/>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="flex items-center justify-between">
+                        <label class="block text-white/80 text-sm font-medium mb-2" for="password">Password</label>
+                        <a class="text-sm font-medium text-primary hover:text-primary/90" href="#">Forgot password?</a>
+                    </div>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/50">lock</span>
+                        <input autocomplete="current-password" class="w-full bg-[#283339] border-none rounded-lg text-white pl-10 pr-4 py-3 focus:ring-2 focus:ring-primary placeholder:text-white/40" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="w-full flex items-center justify-center gap-2 min-w-[120px] max-w-[480px] cursor-pointer overflow-hidden rounded-lg h-12 px-6 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-primary/90" type="submit">
+                        <span class="truncate">Log In</span>
+                    </button>
+                </div>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-sm text-white/60">
+                    Don't have an account?
+                    <a class="font-medium text-primary hover:text-primary/90" href="#">Sign up</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Login page specific JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                SolSignals.utils.showNotification('Please fill in all fields', 'error');
+                return;
+            }
+            
+            // TODO: Implement actual login logic
+            SolSignals.utils.showNotification('Login functionality coming soon', 'info');
+        });
+    }
+});
+</script>
+{% endblock %}

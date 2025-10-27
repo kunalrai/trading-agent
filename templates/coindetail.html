@@ -1,0 +1,221 @@
+{% extends "sidebar_layout.html" %}
+
+{% block title %}{{ symbol }} - SolSignals Coin Details{% endblock %}
+
+{% block sidebar_content %}
+<div class="p-8">
+    <header class="flex items-center justify-between pb-6 border-b border-white/10">
+        <div class="flex items-center gap-4">
+            <h1 class="text-3xl font-bold text-white">{{ coin_name }} ({{ symbol }})</h1>
+            <div class="flex items-center gap-2">
+                <p class="text-3xl font-bold text-white">${{ "%.2f"|format(current_price) }}</p>
+                <p class="text-green-400 text-lg font-medium">{{ "+%.2f%%"|format(price_change_24h) if price_change_24h > 0 else "%.2f%%"|format(price_change_24h) }} (24h)</p>
+            </div>
+        </div>
+        <button class="bg-primary text-white font-bold py-2 px-6 rounded-lg text-lg hover:bg-primary/90 transition-colors">
+            Trade on Exchange
+        </button>
+    </header>
+    
+    <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart Section -->
+        <div class="lg:col-span-2">
+            <div class="bg-[#1a1a1a]/60 rounded-xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <!-- Timeframe Controls -->
+                    <div class="flex h-10 items-center justify-center rounded-lg bg-white/5 p-1">
+                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-3 has-[:checked]:bg-white/10 has-[:checked]:shadow-sm has-[:checked]:text-white text-white/60 text-sm font-medium">
+                            <span class="truncate">1H</span>
+                            <input class="invisible w-0" name="timeframe" type="radio" value="1H"/>
+                        </label>
+                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-3 has-[:checked]:bg-white/10 has-[:checked]:shadow-sm has-[:checked]:text-white text-white/60 text-sm font-medium">
+                            <span class="truncate">4H</span>
+                            <input class="invisible w-0" name="timeframe" type="radio" value="4H"/>
+                        </label>
+                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-3 has-[:checked]:bg-white/10 has-[:checked]:shadow-sm has-[:checked]:text-white text-white/60 text-sm font-medium">
+                            <span class="truncate">1D</span>
+                            <input checked="" class="invisible w-0" name="timeframe" type="radio" value="1D"/>
+                        </label>
+                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-3 has-[:checked]:bg-white/10 has-[:checked]:shadow-sm has-[:checked]:text-white text-white/60 text-sm font-medium">
+                            <span class="truncate">1W</span>
+                            <input class="invisible w-0" name="timeframe" type="radio" value="1W"/>
+                        </label>
+                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-3 has-[:checked]:bg-white/10 has-[:checked]:shadow-sm has-[:checked]:text-white text-white/60 text-sm font-medium">
+                            <span class="truncate">1M</span>
+                            <input class="invisible w-0" name="timeframe" type="radio" value="1M"/>
+                        </label>
+                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-3 has-[:checked]:bg-white/10 has-[:checked]:shadow-sm has-[:checked]:text-white text-white/60 text-sm font-medium">
+                            <span class="truncate">1Y</span>
+                            <input class="invisible w-0" name="timeframe" type="radio" value="1Y"/>
+                        </label>
+                    </div>
+                    
+                    <!-- Chart Controls -->
+                    <div class="flex items-center gap-2">
+                        <button class="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/60">
+                            <span class="material-symbols-outlined">candlestick_chart</span>
+                        </button>
+                        <button class="p-2 rounded-lg bg-white/10 text-primary transition-colors">
+                            <span class="material-symbols-outlined">show_chart</span>
+                        </button>
+                        <button class="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/60">
+                            <span class="material-symbols-outlined">settings</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Price Chart -->
+                <div class="h-[400px]">
+                    <svg fill="none" height="100%" preserveAspectRatio="none" viewBox="0 0 800 400" width="100%" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M0 250 C40 250, 40 100, 80 100 S120 200, 160 200 S200 50, 240 50 S280 220, 320 220 S360 350, 400 350 S440 120, 480 120 S520 280, 560 280 S600 80, 640 80 S680 300, 720 300 S760 150, 800 150" stroke="#13a4ec" stroke-width="3"></path>
+                        <path d="M0 250 C40 250, 40 100, 80 100 S120 200, 160 200 S200 50, 240 50 S280 220, 320 220 S360 350, 400 350 S440 120, 480 120 S520 280, 560 280 S600 80, 640 80 S680 300, 720 300 S760 150, 800 150 L800 400 L0 400 Z" fill="url(#priceChartGradient)"></path>
+                        <defs>
+                            <linearGradient gradientUnits="userSpaceOnUse" id="priceChartGradient" x1="400" x2="400" y1="50" y2="400">
+                                <stop stop-color="#13a4ec" stop-opacity="0.2"></stop>
+                                <stop offset="1" stop-color="#13a4ec" stop-opacity="0"></stop>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                
+                <!-- Time Labels -->
+                <div class="flex justify-between text-sm text-white/60 mt-2">
+                    <span>12 AM</span><span>3 AM</span><span>6 AM</span><span>9 AM</span><span>12 PM</span><span>3 PM</span><span>6 PM</span><span>9 PM</span>
+                </div>
+                
+                <!-- Indicator Controls -->
+                <div class="mt-6">
+                    <div class="flex h-10 flex-1 items-center justify-center rounded-lg bg-white/5 p-1">
+                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-white/10 has-[:checked]:shadow-sm has-[:checked]:text-white text-white/60 text-sm font-medium">
+                            <span class="truncate">Indicators</span>
+                            <input checked="" class="invisible w-0" name="indicators" type="radio" value="Indicators"/>
+                        </label>
+                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-white/10 has-[:checked]:shadow-sm has-[:checked]:text-white text-white/60 text-sm font-medium">
+                            <span class="truncate">RSI</span>
+                            <input class="invisible w-0" name="indicators" type="radio" value="RSI"/>
+                        </label>
+                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-white/10 has-[:checked]:shadow-sm has-[:checked]:text-white text-white/60 text-sm font-medium">
+                            <span class="truncate">MACD</span>
+                            <input class="invisible w-0" name="indicators" type="radio" value="MACD"/>
+                        </label>
+                        <label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-white/10 has-[:checked]:shadow-sm has-[:checked]:text-white text-white/60 text-sm font-medium">
+                            <span class="truncate">Volume</span>
+                            <input class="invisible w-0" name="indicators" type="radio" value="Volume"/>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Sub-chart -->
+                <div class="mt-4 h-32 bg-white/5 rounded-lg p-2">
+                    <p class="text-center text-white/60 pt-12">RSI/MACD/Volume Chart Placeholder</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Side Panel -->
+        <div class="space-y-6">
+            <!-- Key Metrics -->
+            <div class="bg-[#1a1a1a]/60 rounded-xl p-6">
+                <h2 class="text-xl font-bold mb-4 text-white">Key Metrics</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1 py-2">
+                        <p class="text-white/60 text-sm">Market Cap</p>
+                        <p class="font-semibold text-lg text-white">${{ "%.2f"|format(market_cap/1e12) }}T</p>
+                    </div>
+                    <div class="flex flex-col gap-1 py-2">
+                        <p class="text-white/60 text-sm">24h Volume</p>
+                        <p class="font-semibold text-lg text-white">${{ "%.1f"|format(volume_24h/1e9) }}B</p>
+                    </div>
+                    <div class="flex flex-col gap-1 py-2 border-t border-white/10">
+                        <p class="text-white/60 text-sm">Circulating Supply</p>
+                        <p class="font-semibold text-lg text-white">{{ "%.1f"|format(circulating_supply/1e6) }}M</p>
+                    </div>
+                    <div class="flex flex-col gap-1 py-2 border-t border-white/10">
+                        <p class="text-white/60 text-sm">All-Time High</p>
+                        <p class="font-semibold text-lg text-white">${{ "%.2f"|format(ath) }}</p>
+                    </div>
+                    <div class="flex flex-col gap-1 py-2 border-t border-white/10">
+                        <p class="text-white/60 text-sm">All-Time Low</p>
+                        <p class="font-semibold text-lg text-white">${{ "%.2f"|format(atl) }}</p>
+                    </div>
+                    <div class="flex flex-col gap-1 py-2 border-t border-white/10">
+                        <p class="text-white/60 text-sm">Market Rank</p>
+                        <p class="font-semibold text-lg text-white">#{{ market_cap_rank }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Trading Signals -->
+            <div class="bg-[#1a1a1a]/60 rounded-xl p-6">
+                <h2 class="text-xl font-bold mb-4 text-white">Trading Signals</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                        <div>
+                            <p class="font-semibold text-white">Current Signal</p>
+                            <p class="text-sm text-white/60">{{ signal_type or 'HOLD' }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-primary font-bold">{{ "%.1f"|format(signal_strength or 50) }}%</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                        <div>
+                            <p class="font-semibold text-white">Price vs EMA</p>
+                            <p class="text-sm text-white/60">{{ "Above" if (gap or 0) > 0 else "Below" }} by ${{ "%.2f"|format((gap or 0) if (gap or 0) > 0 else -(gap or 0)) }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-{{ 'green' if (gap or 0) > 0 else 'red' }}-400 font-bold">{{ "+%.2f"|format(gap or 0) if (gap or 0) > 0 else "%.2f"|format(gap or 0) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="text-center text-sm text-white/60 mt-8 py-4 border-t border-white/10">
+        Data provided by SolSignals Exchange APIs
+    </footer>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Coin detail page specific JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    const symbol = '{{ symbol }}';
+    
+    // Start real-time updates for coin data
+    SolSignals.realtime.start('coinDetail', updateCoinData, 10000);
+    
+    async function updateCoinData() {
+        try {
+            // This would call a coin-specific API endpoint
+            console.log(`Updating data for ${symbol}`);
+            // Implementation would depend on your API structure
+        } catch (error) {
+            console.error('Failed to update coin data:', error);
+        }
+    }
+    
+    // Timeframe selection handlers
+    document.querySelectorAll('input[name="timeframe"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                console.log('Timeframe changed to:', this.value);
+                // Update chart with new timeframe
+            }
+        });
+    });
+    
+    // Indicator selection handlers
+    document.querySelectorAll('input[name="indicators"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                console.log('Indicator changed to:', this.value);
+                // Update indicator chart
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

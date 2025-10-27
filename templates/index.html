@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}SolSignals - Crypto Breakout Scanner{% endblock %}
+
+{% block extra_head %}
+<!-- Page-specific styles can go here -->
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap justify-between gap-3 p-4">
+    <div class="flex min-w-72 flex-col gap-3">
+        <p class="text-white text-4xl font-black leading-tight tracking-[-0.033em]">Crypto Breakout Scanner</p>
+        <p class="text-white/70 text-base font-normal leading-normal">Real-time analysis of cryptocurrency price movements and technical indicators</p>
+    </div>
+    <div class="flex flex-wrap gap-3">
+        <button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
+            <span class="truncate">Start Scanning</span>
+        </button>
+        <button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-white/10 text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-white/20 transition-colors">
+            <span class="truncate">View Settings</span>
+        </button>
+    </div>
+</div>
+
+<div class="grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-3 p-4">
+    <div class="flex flex-col gap-3 pb-3">
+        <div class="flex flex-col gap-1 rounded-lg border border-white/10 bg-white/5 p-4">
+            <p class="text-white text-base font-medium leading-normal">Active Signals</p>
+            <p class="text-white text-2xl font-bold leading-tight tracking-[-0.015em]" id="active-signals-count">0</p>
+        </div>
+    </div>
+    <div class="flex flex-col gap-3 pb-3">
+        <div class="flex flex-col gap-1 rounded-lg border border-white/10 bg-white/5 p-4">
+            <p class="text-white text-base font-medium leading-normal">Coins Monitored</p>
+            <p class="text-white text-2xl font-bold leading-tight tracking-[-0.015em]">6</p>
+        </div>
+    </div>
+    <div class="flex flex-col gap-3 pb-3">
+        <div class="flex flex-col gap-1 rounded-lg border border-white/10 bg-white/5 p-4">
+            <p class="text-white text-base font-medium leading-normal">Avg Response Time</p>
+            <p class="text-white text-2xl font-bold leading-tight tracking-[-0.015em]">1.2s</p>
+        </div>
+    </div>
+    <div class="flex flex-col gap-3 pb-3">
+        <div class="flex flex-col gap-1 rounded-lg border border-white/10 bg-white/5 p-4">
+            <p class="text-white text-base font-medium leading-normal">Success Rate</p>
+            <p class="text-white text-2xl font-bold leading-tight tracking-[-0.015em]">94%</p>
+        </div>
+    </div>
+</div>
+
+<div class="px-4 py-3">
+    <div class="flex overflow-hidden rounded-lg border border-white/10 bg-white/5">
+        <table class="flex-1 table">
+            <thead>
+                <tr class="border-b border-white/10">
+                    <th class="text-left text-white/80 font-medium py-3 px-4 w-[240px]">Cryptocurrency</th>
+                    <th class="text-left text-white/80 font-medium py-3 px-4 w-[120px]">Price</th>
+                    <th class="text-left text-white/80 font-medium py-3 px-4 w-[120px]">24h Change</th>
+                    <th class="text-left text-white/80 font-medium py-3 px-4 w-[140px]">Signal</th>
+                    <th class="text-left text-white/80 font-medium py-3 px-4 w-[120px]">Strength</th>
+                </tr>
+            </thead>
+            <tbody id="crypto-table-body">
+                <tr class="border-b border-white/5">
+                    <td class="h-[72px] px-4 py-2 w-[240px] text-white text-sm font-medium leading-normal">
+                        <a href="/coin/BTC" class="text-white hover:text-primary transition-colors" data-coin-symbol="BTC">Bitcoin (BTC)</a>
+                    </td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-white text-sm font-normal leading-normal">$43,250.00</td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-green-400 text-sm font-normal leading-normal">+2.5%</td>
+                    <td class="h-[72px] px-4 py-2 w-[140px] text-sm font-normal leading-normal">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span class="text-white">BUY</span>
+                        </div>
+                    </td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-white text-sm font-normal leading-normal">85%</td>
+                </tr>
+                <tr class="border-b border-white/5">
+                    <td class="h-[72px] px-4 py-2 w-[240px] text-white text-sm font-medium leading-normal">
+                        <a href="/coin/ETH" class="text-white hover:text-primary transition-colors" data-coin-symbol="ETH">Ethereum (ETH)</a>
+                    </td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-white text-sm font-normal leading-normal">$2,350.00</td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-red-400 text-sm font-normal leading-normal">-1.2%</td>
+                    <td class="h-[72px] px-4 py-2 w-[140px] text-sm font-normal leading-normal">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                            <span class="text-white">HOLD</span>
+                        </div>
+                    </td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-white text-sm font-normal leading-normal">62%</td>
+                </tr>
+                <tr class="border-b border-white/5">
+                    <td class="h-[72px] px-4 py-2 w-[240px] text-white text-sm font-medium leading-normal">
+                        <a href="/coin/ADA" class="text-white hover:text-primary transition-colors" data-coin-symbol="ADA">Cardano (ADA)</a>
+                    </td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-white text-sm font-normal leading-normal">$0.45</td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-green-400 text-sm font-normal leading-normal">+5.8%</td>
+                    <td class="h-[72px] px-4 py-2 w-[140px] text-sm font-normal leading-normal">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span class="text-white">BUY</span>
+                        </div>
+                    </td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-white text-sm font-normal leading-normal">78%</td>
+                </tr>
+                <tr class="border-b border-white/5">
+                    <td class="h-[72px] px-4 py-2 w-[240px] text-white text-sm font-medium leading-normal">
+                        <a href="/coin/SOL" class="text-white hover:text-primary transition-colors" data-coin-symbol="SOL">Solana (SOL)</a>
+                    </td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-white text-sm font-normal leading-normal">$98.50</td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-green-400 text-sm font-normal leading-normal">+8.1%</td>
+                    <td class="h-[72px] px-4 py-2 w-[140px] text-sm font-normal leading-normal">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span class="text-white">STRONG BUY</span>
+                        </div>
+                    </td>
+                    <td class="h-[72px] px-4 py-2 w-[120px] text-white text-sm font-normal leading-normal">92%</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="text-center py-4">
+    <button class="text-primary hover:text-primary/80 transition-colors font-medium">
+        Load More Results
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Page-specific JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Start real-time updates for scanner data
+    SolSignals.realtime.start('scanner', updateScannerData, 15000);
+    
+    // Add connection status indicator
+    addConnectionIndicator();
+    
+    async function updateScannerData() {
+        try {
+            console.log('Fetching breakout data...');
+            const data = await SolSignals.api.getBreakoutData();
+            console.log('Received data:', data);
+            
+            if (data.status === 'success') {
+                updateTable(data.signals || []);
+                updateStats(data);
+                updateConnectionStatus(true);
+            } else {
+                console.error('API returned error status:', data);
+                updateConnectionStatus(false, data.error);
+            }
+        } catch (error) {
+            console.error('Failed to update scanner data:', error);
+            updateConnectionStatus(false, error.message);
+        }
+    }
+    
+    function updateTable(signals) {
+        const tbody = document.getElementById('crypto-table-body');
+        if (!tbody) return;
+        
+        // Clear existing rows
+        tbody.innerHTML = '';
+        
+        if (!signals.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-8 text-white/60">
+                        No market data available
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        // Create rows for each signal
+        signals.forEach((signal, index) => {
+            const row = createTableRow(signal);
+            tbody.appendChild(row);
+        });
+    }
+    
+    function createTableRow(signal) {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
+        
+        // Extract coin name from symbol (e.g., 'BTC/USDT' -> 'Bitcoin (BTC)')
+        const coinName = getCoinDisplayName(signal.symbol);
+        const priceChangeColor = SolSignals.utils.getPriceChangeColor(signal.price_change_pct);
+        const signalColor = getSignalColor(signal.signal_type);
+        const signalDotColor = getSignalDotColor(signal.signal_type);
+        
+        row.innerHTML = `
+            <td class="h-[72px] px-4 py-2 w-[240px] text-white text-sm font-medium leading-normal">
+                <a href="/coin/${signal.symbol.split('/')[0]}" 
+                   class="text-white hover:text-primary transition-colors" 
+                   data-coin-symbol="${signal.symbol.split('/')[0]}">
+                    ${coinName}
+                </a>
+            </td>
+            <td class="h-[72px] px-4 py-2 w-[120px] text-white text-sm font-normal leading-normal">
+                ${SolSignals.utils.formatPrice(signal.price)}
+            </td>
+            <td class="h-[72px] px-4 py-2 w-[120px] text-sm font-normal leading-normal ${priceChangeColor}">
+                ${SolSignals.utils.formatPercentage(signal.price_change_pct)}
+            </td>
+            <td class="h-[72px] px-4 py-2 w-[140px] text-sm font-normal leading-normal">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 ${signalDotColor} rounded-full"></div>
+                    <span class="text-white">${signal.signal_type}</span>
+                </div>
+            </td>
+            <td class="h-[72px] px-4 py-2 w-[120px] text-white text-sm font-normal leading-normal">
+                ${Math.round(signal.signal_strength || 50)}%
+            </td>
+        `;
+        
+        return row;
+    }
+    
+    function getCoinDisplayName(symbol) {
+        const coinNames = {
+            'BTC/USDT': 'Bitcoin (BTC)',
+            'ETH/USDT': 'Ethereum (ETH)',
+            'SOL/USDT': 'Solana (SOL)',
+            'ADA/USDT': 'Cardano (ADA)',
+            'BNB/USDT': 'BNB (BNB)',
+            'DOT/USDT': 'Polkadot (DOT)',
+            'MATIC/USDT': 'Polygon (MATIC)',
+            'LTC/USDT': 'Litecoin (LTC)',
+            'AVAX/USDT': 'Avalanche (AVAX)',
+            'ATOM/USDT': 'Cosmos (ATOM)'
+        };
+        
+        return coinNames[symbol] || symbol;
+    }
+    
+    function getSignalColor(signalType) {
+        switch(signalType) {
+            case 'STRONG_BUY':
+            case 'BUY':
+                return 'text-green-400';
+            case 'STRONG_SELL':
+            case 'SELL':
+                return 'text-red-400';
+            default:
+                return 'text-yellow-400';
+        }
+    }
+    
+    function getSignalDotColor(signalType) {
+        switch(signalType) {
+            case 'STRONG_BUY':
+            case 'BUY':
+                return 'bg-green-500';
+            case 'STRONG_SELL':
+            case 'SELL':
+                return 'bg-red-500';
+            default:
+                return 'bg-yellow-500';
+        }
+    }
+    
+    function updateStats(data) {
+        // Update active signals count
+        const activeSignalsElement = document.getElementById('active-signals-count');
+        if (activeSignalsElement && data.breakouts_detected !== undefined) {
+            activeSignalsElement.textContent = data.breakouts_detected;
+        }
+        
+        // Update coins monitored count
+        const coinsMonitoredElements = document.querySelectorAll('.coins-monitored-count');
+        coinsMonitoredElements.forEach(element => {
+            if (data.total_symbols !== undefined) {
+                element.textContent = data.total_symbols;
+            }
+        });
+    }
+    
+    function addConnectionIndicator() {
+        // Add connection status indicator to the page
+        const indicator = document.createElement('div');
+        indicator.id = 'connection-status';
+        indicator.className = 'fixed top-4 left-4 z-50 px-3 py-2 rounded-lg shadow-lg text-sm font-medium transition-all duration-300';
+        indicator.innerHTML = `
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                <span>Connecting...</span>
+            </div>
+        `;
+        document.body.appendChild(indicator);
+    }
+    
+    function updateConnectionStatus(connected, error = null) {
+        const indicator = document.getElementById('connection-status');
+        if (!indicator) return;
+        
+        if (connected) {
+            indicator.className = 'fixed top-4 left-4 z-50 px-3 py-2 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 bg-green-500/80 text-white';
+            indicator.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 bg-green-300 rounded-full"></div>
+                    <span>Connected to CoinDCX</span>
+                </div>
+            `;
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+            }, 3000);
+        } else {
+            indicator.className = 'fixed top-4 left-4 z-50 px-3 py-2 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 bg-red-500/80 text-white';
+            indicator.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 bg-red-300 rounded-full"></div>
+                    <span>Connection Error ${error ? '- ' + error : ''}</span>
+                </div>
+            `;
+        }
+    }
+    
+    // Add button click handlers
+    const startScanningBtn = document.querySelector('button:contains("Start Scanning")');
+    if (startScanningBtn) {
+        startScanningBtn.addEventListener('click', function() {
+            SolSignals.utils.showNotification('Real-time scanning is already active!', 'info');
+        });
+    }
+    
+    const viewSettingsBtn = document.querySelector('button:contains("View Settings")');
+    if (viewSettingsBtn) {
+        viewSettingsBtn.addEventListener('click', function() {
+            SolSignals.utils.showNotification('Settings page coming soon!', 'info');
+        });
+    }
+    
+    // Load more results button
+    const loadMoreBtn = document.querySelector('button:contains("Load More Results")');
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', function() {
+            SolSignals.utils.showNotification('All available symbols are shown', 'info');
+        });
+    }
+});
+</script>
+{% endblock %}
