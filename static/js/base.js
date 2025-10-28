@@ -120,7 +120,7 @@ window.SolSignals = {
          * Get breakout scanner data
          */
         getBreakoutData: function() {
-            return this.call('/breakout-data');
+            return this.call('/breakout-scanner');
         },
         
         /**

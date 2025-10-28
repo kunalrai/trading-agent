@@ -81,11 +81,33 @@ class TradingDatabase:
                     )
                 ''')
                 
+                # Create coin_data table for storing all coins data
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS coin_data (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        symbol TEXT NOT NULL,
+                        futures_symbol TEXT NOT NULL,
+                        current_price REAL NOT NULL,
+                        ema_50 REAL NOT NULL,
+                        price_diff REAL NOT NULL,
+                        diff_percentage REAL NOT NULL,
+                        volume_24h REAL NOT NULL,
+                        trend TEXT NOT NULL,
+                        last_updated DATETIME NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(symbol) ON CONFLICT REPLACE
+                    )
+                ''')
+                
                 # Create index for faster queries
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_price_timestamp ON price_data(timestamp)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_signals_timestamp ON trading_signals(timestamp)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_alerts_active ON alerts(is_active)')
                 cursor.execute('CREATE INDEX IF NOT EXISTS idx_settings_key ON settings(setting_key)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_coin_data_symbol ON coin_data(symbol)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_coin_data_updated ON coin_data(last_updated)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_coin_data_diff_pct ON coin_data(diff_percentage)')
+                cursor.execute('CREATE INDEX IF NOT EXISTS idx_coin_data_volume ON coin_data(volume_24h)')
                 
                 # Insert default settings if they don't exist
                 default_settings = [
@@ -678,6 +700,195 @@ class TradingDatabase:
         except sqlite3.Error as e:
             logger.error(f"Error updating multiple settings: {e}")
             return False
+    
+    def store_coin_data(self, coin_data: dict):
+        """Store or update coin data in the database."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT OR REPLACE INTO coin_data 
+                    (symbol, futures_symbol, current_price, ema_50, price_diff, 
+                     diff_percentage, volume_24h, trend, last_updated)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    coin_data['symbol'],
+                    coin_data['futures_symbol'],
+                    coin_data['current_price'],
+                    coin_data['ema_50'],
+                    coin_data['price_diff'],
+                    coin_data['diff_percentage'],
+                    coin_data['volume_24h'],
+                    coin_data['trend'],
+                    datetime.now()
+                ))
+                conn.commit()
+                
+        except sqlite3.Error as e:
+            logger.error(f"Error storing coin data for {coin_data.get('symbol', 'unknown')}: {e}")
+    
+    def store_multiple_coin_data(self, coins_data: list):
+        """Store multiple coin data records efficiently."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Prepare data for batch insert
+                data_tuples = []
+                current_time = datetime.now()
+                
+                for coin_data in coins_data:
+                    data_tuples.append((
+                        coin_data['symbol'],
+                        coin_data['futures_symbol'],
+                        coin_data['current_price'],
+                        coin_data['ema_50'],
+                        coin_data['price_diff'],
+                        coin_data['diff_percentage'],
+                        coin_data['volume_24h'],
+                        coin_data['trend'],
+                        current_time
+                    ))
+                
+                # Batch insert
+                cursor.executemany('''
+                    INSERT OR REPLACE INTO coin_data 
+                    (symbol, futures_symbol, current_price, ema_50, price_diff, 
+                     diff_percentage, volume_24h, trend, last_updated)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', data_tuples)
+                
+                conn.commit()
+                logger.info(f"Stored {len(coins_data)} coin data records")
+                
+        except sqlite3.Error as e:
+            logger.error(f"Error storing multiple coin data: {e}")
+    
+    def get_all_coin_data(self, order_by: str = 'symbol', order_direction: str = 'ASC', 
+                         limit: int = None, offset: int = None):
+        """Get all coin data from database with optional sorting and pagination."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Build query with optional ordering and pagination
+                valid_columns = ['symbol', 'current_price', 'ema_50', 'price_diff', 
+                               'diff_percentage', 'volume_24h', 'last_updated']
+                
+                if order_by not in valid_columns:
+                    order_by = 'symbol'
+                
+                if order_direction.upper() not in ['ASC', 'DESC']:
+                    order_direction = 'ASC'
+                
+                query = f'''
+                    SELECT symbol, futures_symbol, current_price, ema_50, price_diff,
+                           diff_percentage, volume_24h, trend, last_updated
+                    FROM coin_data 
+                    ORDER BY {order_by} {order_direction}
+                '''
+                
+                if limit:
+                    query += f' LIMIT {limit}'
+                    if offset:
+                        query += f' OFFSET {offset}'
+                
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                
+                # Convert to list of dictionaries
+                columns = ['symbol', 'futures_symbol', 'current_price', 'ema_50', 'price_diff',
+                          'diff_percentage', 'volume_24h', 'trend', 'last_updated']
+                
+                coin_data_list = []
+                for row in rows:
+                    coin_dict = dict(zip(columns, row))
+                    # Format timestamp
+                    if coin_dict['last_updated']:
+                        coin_dict['timestamp'] = coin_dict['last_updated']
+                    coin_data_list.append(coin_dict)
+                
+                return coin_data_list
+                
+        except sqlite3.Error as e:
+            logger.error(f"Error retrieving coin data: {e}")
+            return []
+    
+    def get_coin_data_stats(self):
+        """Get statistics about coin data in database."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('SELECT COUNT(*) FROM coin_data')
+                total_coins = cursor.fetchone()[0]
+                
+                cursor.execute('SELECT MAX(last_updated) FROM coin_data')
+                last_update = cursor.fetchone()[0]
+                
+                cursor.execute('''
+                    SELECT COUNT(*) FROM coin_data 
+                    WHERE diff_percentage > 0
+                ''')
+                bullish_count = cursor.fetchone()[0]
+                
+                cursor.execute('''
+                    SELECT COUNT(*) FROM coin_data 
+                    WHERE diff_percentage < 0
+                ''')
+                bearish_count = cursor.fetchone()[0]
+                
+                return {
+                    'total_coins': total_coins,
+                    'last_update': last_update,
+                    'bullish_count': bullish_count,
+                    'bearish_count': bearish_count,
+                    'neutral_count': total_coins - bullish_count - bearish_count
+                }
+                
+        except sqlite3.Error as e:
+            logger.error(f"Error getting coin data stats: {e}")
+            return {
+                'total_coins': 0,
+                'last_update': None,
+                'bullish_count': 0,
+                'bearish_count': 0,
+                'neutral_count': 0
+            }
+    
+    def search_coin_data(self, search_term: str, limit: int = 50):
+        """Search coin data by symbol."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT symbol, futures_symbol, current_price, ema_50, price_diff,
+                           diff_percentage, volume_24h, trend, last_updated
+                    FROM coin_data 
+                    WHERE symbol LIKE ? OR futures_symbol LIKE ?
+                    ORDER BY symbol
+                    LIMIT ?
+                ''', (f'%{search_term}%', f'%{search_term}%', limit))
+                
+                rows = cursor.fetchall()
+                
+                # Convert to list of dictionaries
+                columns = ['symbol', 'futures_symbol', 'current_price', 'ema_50', 'price_diff',
+                          'diff_percentage', 'volume_24h', 'trend', 'last_updated']
+                
+                coin_data_list = []
+                for row in rows:
+                    coin_dict = dict(zip(columns, row))
+                    if coin_dict['last_updated']:
+                        coin_dict['timestamp'] = coin_dict['last_updated']
+                    coin_data_list.append(coin_dict)
+                
+                return coin_data_list
+                
+        except sqlite3.Error as e:
+            logger.error(f"Error searching coin data: {e}")
+            return []
 
 # Singleton instance
 _db_instance = None

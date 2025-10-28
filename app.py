@@ -491,6 +491,122 @@ def monitoring_thread():
         logger.error(f"Monitoring thread error: {e}")
 
 
+def coin_data_background_thread():
+    """Background thread that continuously updates coin data in database"""
+    global global_exchange
+    
+    while True:
+        try:
+            print("🔄 Starting background coin data update...")
+            
+            # Wait for global exchange to be initialized
+            while global_exchange is None:
+                print("⏳ Waiting for exchange initialization...")
+                time.sleep(10)
+            
+            import requests
+            
+            # Get all USDT futures instruments
+            instruments_url = 'https://api.coindcx.com/exchange/v1/derivatives/futures/data/active_instruments?margin_currency_short_name[]=USDT'
+            instruments_response = requests.get(instruments_url)
+            
+            if instruments_response.status_code != 200:
+                print("❌ Failed to fetch instruments, retrying in 5 minutes...")
+                time.sleep(300)  # Wait 5 minutes before retry
+                continue
+            
+            instruments = instruments_response.json()
+            print(f"📊 Processing {len(instruments)} USDT futures instruments in background...")
+            
+            coins_data = []
+            processed_count = 0
+            error_count = 0
+            batch_size = 20  # Process in smaller batches to avoid overwhelming the API
+            
+            for i, instrument in enumerate(instruments):
+                try:
+                    # Parse symbol (format: B-SYMBOL_USDT)
+                    if not instrument.startswith('B-') or not instrument.endswith('_USDT'):
+                        continue
+                    
+                    # Convert to standard format: B-BTC_USDT -> BTC/USDT
+                    base_currency = instrument[2:-5]  # Remove 'B-' and '_USDT'
+                    symbol = f"{base_currency}/USDT"
+                    
+                    # Get current ticker data
+                    ticker = global_exchange.get_ticker(symbol)
+                    if not ticker:
+                        continue
+                    
+                    current_price = ticker.get('last_price', 0)
+                    volume_24h = ticker.get('volume', 0)
+                    
+                    # Get historical data for EMA50 calculation (15m timeframe)
+                    historical_data = global_exchange.get_historical_data(symbol, '15m', 55)
+                    
+                    if not historical_data or len(historical_data) < 50:
+                        continue
+                    
+                    # Calculate EMA50 using close prices
+                    close_prices = [float(candle[4]) for candle in historical_data]
+                    ema_50 = calculate_ema(close_prices, 50)
+                    
+                    if ema_50 is None:
+                        continue
+                    
+                    # Calculate difference (Current Price - EMA50)
+                    price_diff = current_price - ema_50
+                    diff_percentage = (price_diff / ema_50) * 100 if ema_50 > 0 else 0
+                    
+                    # Determine trend direction
+                    trend = "bullish" if price_diff > 0 else "bearish"
+                    
+                    coin_data = {
+                        'symbol': symbol,
+                        'futures_symbol': instrument,
+                        'current_price': round(current_price, 8),
+                        'ema_50': round(ema_50, 8),
+                        'price_diff': round(price_diff, 8),
+                        'diff_percentage': round(diff_percentage, 3),
+                        'volume_24h': volume_24h,
+                        'trend': trend,
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    
+                    coins_data.append(coin_data)
+                    processed_count += 1
+                    
+                    # Store in batches to avoid memory issues and provide incremental updates
+                    if len(coins_data) >= batch_size:
+                        db.store_multiple_coin_data(coins_data)
+                        print(f"📈 Stored batch of {len(coins_data)} coins (total: {processed_count})")
+                        coins_data = []  # Clear batch
+                        time.sleep(1)  # Small delay between batches
+                    
+                except Exception as coin_error:
+                    error_count += 1
+                    if error_count <= 10:  # Only log first 10 errors to avoid spam
+                        print(f"❌ Error processing {instrument}: {coin_error}")
+                    continue
+            
+            # Store any remaining coins
+            if coins_data:
+                db.store_multiple_coin_data(coins_data)
+                print(f"📈 Stored final batch of {len(coins_data)} coins")
+            
+            print(f"✅ Background update completed: {processed_count} coins processed, {error_count} errors")
+            
+            # Wait 15 minutes before next update
+            print("⏰ Waiting 15 minutes before next update...")
+            time.sleep(900)  # 15 minutes
+            
+        except Exception as e:
+            print(f"❌ Error in background coin data thread: {e}")
+            import traceback
+            traceback.print_exc()
+            time.sleep(300)  # Wait 5 minutes before retry
+
+
 @app.route('/')
 def index():
     """Main index page - primary breakout scanner interface"""
@@ -506,8 +622,8 @@ def dashboard_page():
 
 @app.route('/scanner')
 def scanner():
-    """Scanner page - same as index"""
-    return render_template('index.html')
+    """Coin scanner page for 378 USDT futures"""
+    return render_template('coin_scanner.html')
 
 @app.route('/index')
 def index_alt():
@@ -1063,7 +1179,7 @@ def api_latest_data():
 
 @app.route('/api/breakout-scanner')
 def api_breakout_scanner():
-    """Get breakout signals for multiple symbols"""
+    """Get breakout signals for multiple symbols using CoinDCX futures API"""
     try:
         # Get symbols from query parameter or use default list
         symbols_param = request.args.get('symbols', '')
@@ -1079,27 +1195,210 @@ def api_breakout_scanner():
         
         signals = []
         
+        # Use global exchange (CoinDCX) for data
+        if global_exchange is None:
+            from exchanges.coindcx_exchange import CoinDCXExchange
+            exchange = CoinDCXExchange()
+            exchange.initialize()
+        else:
+            exchange = global_exchange
+        
+        print(f"DEBUG: Starting breakout scan for {len(symbols)} symbols")
+        
         for symbol in symbols:
             try:
-                # Get current market data
-                signal_data = analyze_breakout_signal(symbol, volume_threshold, price_threshold)
+                print(f"DEBUG: Analyzing {symbol}...")
+                # Get current market data from CoinDCX futures
+                signal_data = analyze_breakout_signal_coindcx(exchange, symbol, volume_threshold, price_threshold)
                 if signal_data:
                     signals.append(signal_data)
+                    print(f"DEBUG: Added signal for {symbol}: {signal_data.get('signal_type', 'UNKNOWN')}")
+                else:
+                    print(f"DEBUG: No signal detected for {symbol}")
             except Exception as symbol_error:
                 print(f"Error analyzing {symbol}: {symbol_error}")
                 continue
         
+        print(f"DEBUG: Returning {len(signals)} signals out of {len(symbols)} symbols")
+        
         return jsonify({
-            'success': True,
+            'status': 'success',
             'signals': signals,
             'scan_time': datetime.now().isoformat(),
             'symbols_scanned': len(symbols),
-            'breakouts_detected': len([s for s in signals if s.get('signal_type') != 'NEUTRAL'])
+            'breakouts_detected': len([s for s in signals if s.get('signal_type') not in ['NEUTRAL', 'HOLD']]),
+            'total_symbols': len(symbols),
+            'exchange': 'CoinDCX Futures'
         })
         
     except Exception as e:
         print(f"Error in breakout scanner: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+
+def analyze_breakout_signal_coindcx(exchange, symbol, volume_threshold=2.0, price_threshold=0.05):
+    """
+    Analyze a symbol for breakout signals using CoinDCX futures data
+    
+    Args:
+        exchange: CoinDCX exchange instance
+        symbol: Trading symbol (e.g., 'BTC/USDT')
+        volume_threshold: Volume multiplier threshold
+        price_threshold: Price change threshold
+    
+    Returns:
+        Dict with signal data or None if no signal
+    """
+    # Function disabled - return None to stop analysis
+    return None
+    
+    try:
+        print(f"DEBUG: Getting ticker for {symbol}")
+        # Get current ticker data from CoinDCX futures
+        ticker = exchange.get_ticker(symbol)
+        if not ticker:
+            print(f"DEBUG: No ticker data for {symbol}")
+            return None
+        
+        current_price = ticker['last_price']
+        
+        # Get historical data for analysis
+        historical_data = exchange.get_historical_data(symbol, '15m', 20)
+        
+        if not historical_data or len(historical_data) < 10:
+            print(f"DEBUG: Insufficient historical data for {symbol}: {len(historical_data) if historical_data else 0} candles")
+            return None
+        
+        print(f"DEBUG: {symbol} has {len(historical_data)} historical candles")
+        
+        # Calculate metrics
+        prices = [candle[4] for candle in historical_data]  # Close prices
+        volumes = [candle[5] for candle in historical_data]  # Volumes
+        
+        # Price analysis
+        previous_price = prices[-2] if len(prices) > 1 else prices[-1]
+        price_change = (current_price - previous_price) / previous_price
+        price_change_pct = price_change * 100
+        
+        # Volume analysis
+        current_volume = volumes[-1] if volumes else 0
+        avg_volume = sum(volumes[-10:]) / 10 if len(volumes) >= 10 else current_volume
+        volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
+        
+        # EMA analysis
+        if len(prices) >= 20:
+            ema_20 = calculate_ema(prices, 20)
+            ema_distance = (current_price - ema_20) / ema_20 if ema_20 else 0
+        else:
+            ema_20 = None
+            ema_distance = 0
+        
+        # Moving average analysis
+        short_ma = sum(prices[-5:]) / 5 if len(prices) >= 5 else current_price
+        long_ma = sum(prices[-10:]) / 10 if len(prices) >= 10 else current_price
+        momentum = (short_ma - long_ma) / long_ma if long_ma > 0 else 0
+        
+        # Get 24h change from ticker
+        change_24h = ticker.get('price_change_percent', 0)
+        
+        # Determine signal type and strength
+        signal_type = 'HOLD'
+        signal_strength = 50
+        signal_reason = 'No significant signal'
+        
+        # Check for breakout conditions
+        strong_volume = volume_ratio >= volume_threshold
+        significant_price_move = abs(price_change) >= price_threshold
+        positive_momentum = momentum > 0.01
+        negative_momentum = momentum < -0.01
+        above_ema = ema_distance > 0.02 if ema_20 else False  # 2% above EMA
+        below_ema = ema_distance < -0.02 if ema_20 else False  # 2% below EMA
+        
+        # Signal scoring system
+        score = 0
+        reasons = []
+        
+        # Price momentum (0-25 points)
+        if abs(price_change_pct) > 2:
+            score += min(abs(price_change_pct) * 5, 25)
+            direction = "upward" if price_change_pct > 0 else "downward"
+            reasons.append(f"{direction} momentum ({price_change_pct:+.1f}%)")
+        
+        # Volume confirmation (0-25 points)
+        if volume_ratio > 1.5:
+            score += min((volume_ratio - 1) * 15, 25)
+            reasons.append(f"volume surge ({volume_ratio:.1f}x)")
+        
+        # EMA position (0-20 points)
+        if ema_20:
+            if above_ema and price_change > 0:
+                score += 20
+                reasons.append(f"above EMA with bullish momentum")
+            elif below_ema and price_change < 0:
+                score += 20
+                reasons.append(f"below EMA with bearish momentum")
+            elif abs(ema_distance) < 0.01:  # Very close to EMA
+                score += 15
+                reasons.append(f"price touching EMA")
+        
+        # 24h trend confirmation (0-15 points)
+        if abs(change_24h) > 5:
+            score += min(abs(change_24h), 15)
+            trend = "bullish" if change_24h > 0 else "bearish"
+            reasons.append(f"24h {trend} trend ({change_24h:+.1f}%)")
+        
+        # Moving average trend (0-15 points)
+        if abs(momentum) > 0.02:
+            score += min(abs(momentum) * 100, 15)
+            ma_trend = "bullish" if momentum > 0 else "bearish"
+            reasons.append(f"MA {ma_trend} crossover")
+        
+        # Determine final signal based on score
+        if score >= 40:
+            if price_change > 0 and (positive_momentum or above_ema):
+                signal_type = 'STRONG_BUY' if score >= 70 else 'BUY'
+            elif price_change < 0 and (negative_momentum or below_ema):
+                signal_type = 'STRONG_SELL' if score >= 70 else 'SELL'
+            else:
+                signal_type = 'BUY' if score >= 60 else 'HOLD'
+            
+            signal_strength = min(score, 100)
+            signal_reason = '; '.join(reasons[:3])  # Top 3 reasons
+        elif score >= 20:
+            signal_type = 'VOLUME_SURGE' if strong_volume else 'WEAK_SIGNAL'
+            signal_strength = score
+            signal_reason = '; '.join(reasons[:2])
+        
+        print(f"DEBUG: {symbol} score: {score}, signal: {signal_type}")
+        
+        # Only return signals that meet minimum criteria OR return all for debugging
+        # Temporarily lowering threshold to see data
+        if score >= 10 or True:  # Return all signals for debugging
+            return {
+                'symbol': symbol,
+                'signal_type': signal_type,
+                'price': current_price,
+                'price_change': price_change,
+                'price_change_pct': price_change_pct,
+                'change_24h': change_24h,
+                'volume': current_volume,
+                'volume_ratio': volume_ratio,
+                'signal_strength': round(signal_strength, 1),
+                'signal_reason': signal_reason,
+                'timestamp': datetime.now().isoformat(),
+                'momentum': momentum,
+                'ema_distance': ema_distance * 100,  # Convert to percentage
+                'score': score,
+                'source': ticker.get('source', 'futures')
+            }
+        
+        return None
+        
+    except Exception as e:
+        print(f"Error analyzing breakout for {symbol}: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 @app.route('/api/breakout-symbols', methods=['GET'])
@@ -1170,6 +1469,336 @@ def api_manual_cleanup():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/coindata')
+def coindata_page():
+    """Coin data page showing all 378 USDT futures with EMA50 analysis"""
+    return render_template('coin_scanner.html')
+
+
+@app.route('/api/all-coins-data')
+def api_all_coins_data():
+    """Get all coins data from database (fast response)"""
+    try:
+        # Get pagination parameters
+        limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
+        order_by = request.args.get('order_by', 'symbol')
+        order_direction = request.args.get('order_direction', 'ASC')
+        search = request.args.get('search', '')
+        
+        print(f"� Fetching coin data from database (limit: {limit}, offset: {offset})...")
+        
+        # Get data from database
+        if search:
+            coins_data = db.search_coin_data(search, limit)
+        else:
+            coins_data = db.get_all_coin_data(order_by, order_direction, limit, offset)
+        
+        # Get statistics
+        stats = db.get_coin_data_stats()
+        
+        print(f"✅ Retrieved {len(coins_data)} coins from database")
+        
+        return jsonify({
+            'status': 'success',
+            'coins': coins_data,
+            'total_coins': len(coins_data),
+            'total_available': stats['total_coins'],
+            'last_updated': stats['last_update'],
+            'timeframe': '15m',
+            'exchange': 'CoinDCX Futures',
+            'source': 'database',
+            'statistics': stats,
+            'pagination': {
+                'limit': limit,
+                'offset': offset,
+                'has_more': len(coins_data) == limit  # If we got full limit, there might be more
+            }
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in database coin data API: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+
+@app.route('/api/all-coins-data-batch')
+def api_all_coins_data_batch():
+    """Get additional batches of coin data for pagination"""
+    try:
+        import requests
+        
+        # Get pagination parameters
+        offset = int(request.args.get('offset', 50))  # Start from this index
+        limit = int(request.args.get('limit', 50))    # Number of coins to process
+        
+        print(f"🔍 Fetching CoinDCX USDT futures data batch (offset: {offset}, limit: {limit})...")
+        
+        # Get all USDT futures instruments
+        instruments_url = 'https://api.coindcx.com/exchange/v1/derivatives/futures/data/active_instruments?margin_currency_short_name[]=USDT'
+        instruments_response = requests.get(instruments_url)
+        
+        if instruments_response.status_code != 200:
+            return jsonify({'status': 'error', 'error': 'Failed to fetch instruments'}), 500
+        
+        instruments = instruments_response.json()
+        
+        # Initialize exchange
+        if global_exchange is None:
+            from exchanges.coindcx_exchange import CoinDCXExchange
+            exchange = CoinDCXExchange()
+            exchange.initialize()
+        else:
+            exchange = global_exchange
+        
+        coins_data = []
+        processed_count = 0
+        error_count = 0
+        instrument_index = 0
+        
+        print(f"📊 Processing batch from instruments {offset} to {offset + limit * 2}...")
+        
+        for instrument in instruments:
+            try:
+                # Skip instruments until we reach the offset
+                if instrument_index < offset:
+                    instrument_index += 1
+                    continue
+                
+                # Parse symbol (format: B-SYMBOL_USDT)
+                if not instrument.startswith('B-') or not instrument.endswith('_USDT'):
+                    instrument_index += 1
+                    continue
+                
+                # Convert to standard format: B-BTC_USDT -> BTC/USDT
+                base_currency = instrument[2:-5]  # Remove 'B-' and '_USDT'
+                symbol = f"{base_currency}/USDT"
+                
+                # Get current ticker data
+                ticker = exchange.get_ticker(symbol)
+                if not ticker:
+                    instrument_index += 1
+                    continue
+                
+                current_price = ticker.get('last_price', 0)
+                volume_24h = ticker.get('volume', 0)
+                
+                # Get historical data for EMA50 calculation (15m timeframe)
+                historical_data = exchange.get_historical_data(symbol, '15m', 55)
+                
+                if not historical_data or len(historical_data) < 50:
+                    instrument_index += 1
+                    continue
+                
+                # Calculate EMA50 using close prices
+                close_prices = [float(candle[4]) for candle in historical_data]
+                ema_50 = calculate_ema(close_prices, 50)
+                
+                if ema_50 is None:
+                    instrument_index += 1
+                    continue
+                
+                # Calculate difference (Current Price - EMA50)
+                price_diff = current_price - ema_50
+                diff_percentage = (price_diff / ema_50) * 100 if ema_50 > 0 else 0
+                
+                # Determine trend direction
+                trend = "bullish" if price_diff > 0 else "bearish"
+                
+                coin_data = {
+                    'symbol': symbol,
+                    'futures_symbol': instrument,
+                    'current_price': round(current_price, 8),
+                    'ema_50': round(ema_50, 8),
+                    'price_diff': round(price_diff, 8),
+                    'diff_percentage': round(diff_percentage, 3),
+                    'volume_24h': volume_24h,
+                    'trend': trend,
+                    'timestamp': datetime.now().isoformat()
+                }
+                
+                coins_data.append(coin_data)
+                processed_count += 1
+                instrument_index += 1
+                
+                # Break after getting the requested limit
+                if processed_count >= limit:
+                    break
+                
+            except Exception as coin_error:
+                error_count += 1
+                instrument_index += 1
+                if error_count <= 3:  # Only log first 3 errors to avoid spam
+                    print(f"❌ Error processing {instrument}: {coin_error}")
+                continue
+        
+        # Sort by symbol for consistent display
+        coins_data.sort(key=lambda x: x['symbol'])
+        
+        has_more = instrument_index < len(instruments)
+        
+        print(f"✅ Successfully processed {len(coins_data)} coins in batch (offset: {offset})")
+        
+        return jsonify({
+            'status': 'success',
+            'data': coins_data,
+            'total_coins': len(coins_data),
+            'total_instruments': len(instruments),
+            'processed_count': processed_count,
+            'error_count': error_count,
+            'timeframe': '15m',
+            'last_updated': datetime.now().isoformat(),
+            'exchange': 'CoinDCX Futures',
+            'offset': offset,
+            'limit': limit,
+            'has_more': has_more,
+            'next_offset': instrument_index if has_more else None
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in batch coins data API: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+
+@app.route('/api/coin-data-stats')
+def api_coin_data_stats():
+    """Get statistics about coin data in database"""
+    try:
+        stats = db.get_coin_data_stats()
+        return jsonify({
+            'status': 'success',
+            'statistics': stats
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+
+@app.route('/api/force-coin-data-refresh', methods=['POST'])
+def api_force_coin_data_refresh():
+    """Force immediate refresh of coin data (runs in background)"""
+    try:
+        # Start a separate thread for immediate refresh
+        from threading import Thread
+        
+        def immediate_refresh():
+            try:
+                print("🔄 Starting immediate coin data refresh...")
+                # This will run the same logic as the background thread but immediately
+                coin_data_background_thread_single_run()
+            except Exception as e:
+                print(f"❌ Error in immediate refresh: {e}")
+        
+        refresh_thread = Thread(target=immediate_refresh, daemon=True)
+        refresh_thread.start()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Coin data refresh started in background'
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+
+def coin_data_background_thread_single_run():
+    """Single run of coin data update (used for immediate refresh)"""
+    global global_exchange
+    
+    if global_exchange is None:
+        print("❌ Exchange not initialized for immediate refresh")
+        return
+    
+    try:
+        import requests
+        
+        # Get all USDT futures instruments
+        instruments_url = 'https://api.coindcx.com/exchange/v1/derivatives/futures/data/active_instruments?margin_currency_short_name[]=USDT'
+        instruments_response = requests.get(instruments_url)
+        
+        if instruments_response.status_code != 200:
+            print("❌ Failed to fetch instruments for refresh")
+            return
+        
+        instruments = instruments_response.json()
+        print(f"📊 Refreshing {len(instruments)} USDT futures instruments...")
+        
+        coins_data = []
+        processed_count = 0
+        batch_size = 30  # Larger batches for immediate refresh
+        
+        for instrument in instruments:
+            try:
+                # Parse symbol (format: B-SYMBOL_USDT)
+                if not instrument.startswith('B-') or not instrument.endswith('_USDT'):
+                    continue
+                
+                # Convert to standard format: B-BTC_USDT -> BTC/USDT
+                base_currency = instrument[2:-5]  # Remove 'B-' and '_USDT'
+                symbol = f"{base_currency}/USDT"
+                
+                # Get current ticker data
+                ticker = global_exchange.get_ticker(symbol)
+                if not ticker:
+                    continue
+                
+                current_price = ticker.get('last_price', 0)
+                volume_24h = ticker.get('volume', 0)
+                
+                # Get historical data for EMA50 calculation
+                historical_data = global_exchange.get_historical_data(symbol, '15m', 55)
+                
+                if not historical_data or len(historical_data) < 50:
+                    continue
+                
+                # Calculate EMA50
+                close_prices = [float(candle[4]) for candle in historical_data]
+                ema_50 = calculate_ema(close_prices, 50)
+                
+                if ema_50 is None:
+                    continue
+                
+                # Calculate metrics
+                price_diff = current_price - ema_50
+                diff_percentage = (price_diff / ema_50) * 100 if ema_50 > 0 else 0
+                trend = "bullish" if price_diff > 0 else "bearish"
+                
+                coin_data = {
+                    'symbol': symbol,
+                    'futures_symbol': instrument,
+                    'current_price': round(current_price, 8),
+                    'ema_50': round(ema_50, 8),
+                    'price_diff': round(price_diff, 8),
+                    'diff_percentage': round(diff_percentage, 3),
+                    'volume_24h': volume_24h,
+                    'trend': trend
+                }
+                
+                coins_data.append(coin_data)
+                processed_count += 1
+                
+                # Store in batches
+                if len(coins_data) >= batch_size:
+                    db.store_multiple_coin_data(coins_data)
+                    print(f"📈 Refreshed batch of {len(coins_data)} coins (total: {processed_count})")
+                    coins_data = []
+                
+            except Exception as coin_error:
+                continue
+        
+        # Store any remaining coins
+        if coins_data:
+            db.store_multiple_coin_data(coins_data)
+            print(f"📈 Refreshed final batch of {len(coins_data)} coins")
+        
+        print(f"✅ Immediate refresh completed: {processed_count} coins updated")
+        
+    except Exception as e:
+        print(f"❌ Error in immediate refresh: {e}")
+
+
 if __name__ == '__main__':
     # Check if required dependencies are available
     try:
@@ -1190,6 +1819,11 @@ if __name__ == '__main__':
     monitor_thread = Thread(target=monitoring_thread, daemon=True)
     monitor_thread.start()
     print("✅ Monitoring thread started")
+    
+    # Start background coin data thread
+    coin_data_thread = Thread(target=coin_data_background_thread, daemon=True)
+    coin_data_thread.start()
+    print("✅ Background coin data thread started")
     
     # Start Flask app
     print("🌐 Starting SolSignals Web Dashboard...")

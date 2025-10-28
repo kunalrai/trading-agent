@@ -2,6 +2,90 @@
 
 This guide explains how to use the enhanced CoinDCX API integration in the SolSignals project to fetch comprehensive market data.
 
+## Market Coverage
+
+### 📊 **Total Markets Available: 1,072**
+
+CoinDCX offers extensive cryptocurrency trading pairs across multiple base currencies:
+
+#### **Trading Pairs Breakdown:**
+- 💰 **USDT pairs**: 554 markets
+- 💰 **USDC pairs**: 2 markets  
+- ₿ **BTC pairs**: 64 markets
+- ₹ **INR pairs**: 437 markets
+
+#### **Unique Cryptocurrencies**: 554+ coins available for USDT trading
+
+### 🚀 **Popular Cryptocurrencies Available:**
+All major cryptocurrencies are supported:
+- ✅ **BTC/USDT** - Bitcoin
+- ✅ **ETH/USDT** - Ethereum  
+- ✅ **SOL/USDT** - Solana
+- ✅ **ADA/USDT** - Cardano
+- ✅ **BNB/USDT** - Binance Coin
+- ✅ **DOT/USDT** - Polkadot
+- ✅ **MATIC/USDT** - Polygon
+- ✅ **AVAX/USDT** - Avalanche
+- ✅ **ATOM/USDT** - Cosmos
+- ✅ **LTC/USDT** - Litecoin
+
+### 🎯 **Specialized Categories:**
+
+### 🎯 **Specialized Categories:**
+
+#### **📈 USDT Futures Market: 378 Cryptocurrencies**
+
+**Official CoinDCX API Endpoint:**
+```
+https://api.coindcx.com/exchange/v1/derivatives/futures/data/active_instruments?margin_currency_short_name[]=USDT
+```
+
+**Total USDT Futures Instruments:** 378 active trading pairs
+
+#### **🚀 Popular Coins Available (11/12):**
+- ✅ **BTC** → B-BTC_USDT
+- ✅ **ETH** → B-ETH_USDT  
+- ✅ **SOL** → B-SOL_USDT
+- ✅ **ADA** → B-ADA_USDT
+- ✅ **BNB** → B-BNB_USDT
+- ✅ **DOT** → B-DOT_USDT
+- ✅ **AVAX** → B-AVAX_USDT
+- ✅ **ATOM** → B-ATOM_USDT
+- ✅ **LTC** → B-LTC_USDT
+- ✅ **DOGE** → B-DOGE_USDT
+- ✅ **SHIB** → B-1000SHIB_USDT
+- ❌ **MATIC** (Not available in futures)
+
+#### **🎯 Futures Market Categories:**
+
+**🐶 Meme Coins (8 available):**
+BONK, CAT, DOGE, FLOKI, PEPE, RATS, SHIB, WIF
+
+**🏦 DeFi Tokens (7 available):**
+1INCH, AAVE, CAKE, COMP, SUSHI, UNI, YFI
+
+**🌐 Layer 1 Blockchains (11 available):**
+ADA, ALGO, APT, ATOM, AVAX, BTC, DOT, ETH, NEAR, SOL, SUI
+
+#### **📋 Sample USDT Futures Instruments:**
+1. B-LUMIA_USDT, B-ID_USDT, B-SSV_USDT
+2. B-LUNA2_USDT, B-PONKE_USDT, B-RUNE_USDT  
+3. B-DRIFT_USDT, B-JOE_USDT, B-HFT_USDT
+4. B-1000PEPE_USDT, B-FIDA_USDT, B-GLM_USDT
+5. And 366+ more active instruments...
+
+#### **🪙 Complete Coverage (A-Z):**
+0G, 1INCH, A2Z, AAVE, ACE, ACH, ACT, APT, ARB, ATOM, AVAX, BTC, ETH, SOL, and 364+ more cryptocurrencies available for futures trading.
+
+#### **🐶 Meme Coins (6 available):**
+- BONK, DOGE, FLOKI, PEPE, SHIB, WIF
+
+#### **🏦 DeFi Tokens (6+ available):**
+- 1INCH, AAVE, CAKE, COMP, SUSHI, UNI
+
+#### **📋 Sample Altcoins (A-Z):**
+0G, 1INCH, A, A2Z, AAVE, ACH, ACS, ACX, ADA, ADX, AERGO, AERO, AEVO, AGLD, AI16Z, AIOZ, AIPAD, AIXBT, AKT, ALEX, and 500+ more...
+
 ## Overview
 
 The CoinDCX exchange implementation provides access to both **spot** and **futures** market data from CoinDCX, including:

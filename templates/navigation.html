@@ -1,7 +1,8 @@
 <!-- Main Navigation Template -->
 <nav class="flex items-center gap-9">
-    <a class="nav-link {% if request.endpoint == 'index' or request.endpoint == 'index_alt' or request.endpoint == 'scanner' %}text-primary{% else %}text-white/80 hover:text-white{% endif %} text-sm font-medium leading-normal" href="/">Home</a>
+    <a class="nav-link {% if request.endpoint == 'index' or request.endpoint == 'index_alt' %}text-primary{% else %}text-white/80 hover:text-white{% endif %} text-sm font-medium leading-normal" href="/">Home</a>
     <a class="nav-link {% if request.endpoint == 'dashboard_page' %}text-primary{% else %}text-white/80 hover:text-white{% endif %} text-sm font-medium leading-normal" href="/dashboard">Dashboard</a>
+    <a class="nav-link {% if request.endpoint == 'scanner' %}text-primary{% else %}text-white/80 hover:text-white{% endif %} text-sm font-medium leading-normal" href="/scanner">Coin Scanner</a>
     <a class="nav-link {% if request.endpoint == 'alerts_page' %}text-primary{% else %}text-white/80 hover:text-white{% endif %} text-sm font-medium leading-normal" href="/alerts">Alerts</a>
     <a class="nav-link {% if request.endpoint == 'settings' %}text-primary{% else %}text-white/80 hover:text-white{% endif %} text-sm font-medium leading-normal" href="/settings">Settings</a>
 </nav>
