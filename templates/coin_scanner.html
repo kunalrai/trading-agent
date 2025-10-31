@@ -312,7 +312,7 @@ function displayCoins() {
         const diffColor = coin.price_diff >= 0 ? 'text-green-400' : 'text-red-400';
         const diffSign = coin.price_diff >= 0 ? '+' : '';
         
-        const updatedTime = coin.updated_at ? new Date(coin.updated_at).toLocaleTimeString() : 'N/A';
+        const updatedTime = coin.last_updated ? new Date(coin.last_updated).toLocaleTimeString() : 'N/A';
         
         // Create CoinDCX futures chart link
         const chartUrl = coin.futures_symbol ? `https://coindcx.com/futures/${coin.futures_symbol}` : '#';

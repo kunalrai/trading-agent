@@ -1069,23 +1069,8 @@ function handleChartError(error, chartName) {
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
     try {
-        // Check if all required chart elements exist
-        const requiredElements = ['priceChart', 'gapChart', 'volumeChart', 'liveChart'];
-        const missingElements = requiredElements.filter(id => !document.getElementById(id));
-        
-        if (missingElements.length > 0) {
-            console.warn('Missing chart elements:', missingElements);
-            showNotification('Some chart elements are missing', 'error');
-            return;
-        }
-        
-        initCharts();
-        
-        // Wait a bit before calling updateChartData to ensure charts are initialized
-        setTimeout(() => {
-            updateChartData();
-            updateCandlestickData(4); // Load 4 hours of candlestick data by default
-        }, 100);
+       
+       
         
         refreshSignals();
         refreshAlerts();
@@ -1099,15 +1084,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error in updateData interval:', error);
             }
         }, 5000);
-        
-        setInterval(() => {
-            try {
-                updateChartData();
-            } catch (error) {
-                console.error('Error in updateChartData interval:', error);
-            }
-        }, 60000);
-        
+
+     
+
         setInterval(() => {
             try {
                 refreshSignals();

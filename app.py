@@ -48,6 +48,9 @@ latest_data = {
     'ema_period': 50,
     'timeframe': '15m',
     'status': 'Initializing...',
+    'signal_type': 'HOLD',
+    'signal_strength': 0.0,
+    'signal_reason': 'Waiting for data...',
     'historical_data': []
 }
 data_lock = Lock()
@@ -1480,7 +1483,9 @@ def api_all_coins_data():
     """Get all coins data from database (fast response)"""
     try:
         # Get pagination parameters
-        limit = int(request.args.get('limit', 50))
+        limit = request.args.get('limit')
+        if limit is not None:
+            limit = int(limit)
         offset = int(request.args.get('offset', 0))
         order_by = request.args.get('order_by', 'symbol')
         order_direction = request.args.get('order_direction', 'ASC')
@@ -1512,7 +1517,7 @@ def api_all_coins_data():
             'pagination': {
                 'limit': limit,
                 'offset': offset,
-                'has_more': len(coins_data) == limit  # If we got full limit, there might be more
+                'has_more': limit is not None and len(coins_data) == limit  # If we got full limit, there might be more
             }
         })
         

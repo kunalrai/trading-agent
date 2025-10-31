@@ -1,25 +1,205 @@
-/* SolSignals Dashboard Styles */
+/* ============================================================================
+   SolSignals Dashboard Styles - Comprehensive CSS Organization
+   ============================================================================ */
+
+/* ============================================================================
+   BASE STYLES
+   ============================================================================ */
 
 body {
     background-color: #0f1419;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.dark-card {
-    background-color: #1a1f2e;
-    border: 1px solid #2d3748;
+/* ============================================================================
+   UTILITY CLASSES
+   ============================================================================ */
+
+/* Custom color utilities */
+.text-crypto-green { color: #10b981 !important; }
+.text-crypto-red { color: #ef4444 !important; }
+.text-crypto-blue { color: #3b82f6 !important; }
+.text-crypto-purple { color: #8b5cf6 !important; }
+.bg-crypto-blue { background-color: #3b82f6 !important; }
+.bg-crypto-green { background-color: #10b981 !important; }
+.bg-crypto-red { background-color: #ef4444 !important; }
+.text-text-muted { color: #9ca3af !important; }
+.text-muted { color: #9ca3af !important; }
+
+/* ============================================================================
+   LAYOUT COMPONENTS
+   ============================================================================ */
+
+/* Main view management */
+.main-view {
+    display: block;
 }
+
+.main-view.hidden {
+    display: none;
+}
+
+/* Dark themed cards */
+.dark-card {
+    background-color: #1f2937;
+    border: 1px solid #374151;
+}
+
+/* Metric cards for dashboard stats */
+.metric-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================================================
+   BUTTON COMPONENTS
+   ============================================================================ */
+
+/* Glass effect buttons */
+.glass-button {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    color: white;
+    font-weight: 500;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.glass-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.glass-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* Tab navigation buttons */
+.tab-button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.tab-button.active {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.tab-button:not(.active) {
+    color: #9ca3af;
+    background-color: transparent;
+}
+
+.tab-button:not(.active):hover {
+    color: white;
+    background-color: #374151;
+    border-color: #4b5563;
+}
+
+/* Navigation buttons */
+.nav-button {
+    transition: all 0.3s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+}
+
+.nav-button.active {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.nav-button:not(.active):hover {
+    background-color: rgba(75, 85, 99, 0.5);
+    color: white;
+}
+
+/* ============================================================================
+   FORM COMPONENTS
+   ============================================================================ */
+
+/* Input fields */
+.alert-input {
+    background-color: #1f2937;
+    border: 1px solid #4b5563;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.alert-input:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.alert-input::placeholder {
+    color: #9ca3af;
+}
+
+/* Select dropdowns */
+.scanner-select {
+    background-color: #1f2937;
+    border: 1px solid #4b5563;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: white;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    appearance: none;
+    transition: all 0.3s ease;
+}
+
+.scanner-select:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ============================================================================
+   CHART COMPONENTS
+   ============================================================================ */
 
 .chart-container {
     position: relative;
-    height: 400px;  /* Increased from 200px for better visibility */
+    height: 16rem;
     width: 100%;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 0.5rem;
+    padding: 1rem;
 }
 
 .chart-container-main {
     position: relative;
-    height: 500px;  /* Extra large for main price chart */
+    height: 20rem;
     width: 100%;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 0.5rem;
+    padding: 1rem;
 }
 
 canvas {
@@ -28,170 +208,68 @@ canvas {
     width: 100% !important;
 }
 
-.metric-card {
-    background: linear-gradient(145deg, #1a1f2e, #151a26);
-    border: 1px solid #2d3748;
-}
+/* ============================================================================
+   TABLE COMPONENTS
+   ============================================================================ */
 
-.glass-button {
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    -webkit-backdrop-filter: blur(10px); /* Safari support */
-    backdrop-filter: blur(10px);
-}
-
-.glass-button:hover {
-    background: rgba(59, 130, 246, 0.2);
-}
-
-.alert-input {
-    background: #1a1f2e;
-    border: 1px solid #374151;
-    color: #f9fafb;
-}
-
-.alert-input:focus {
-    border-color: #3b82f6;
-    outline: none;
-}
-
-/* Custom scrollbar for dark theme */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: #1a1f2e;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #374151;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #4b5563;
-}
-
-/* Responsive table */
-@media (max-width: 768px) {
-    .chart-container {
-        height: 300px;  /* Increased from 150px for mobile visibility */
-    }
-    
-    .chart-container-main {
-        height: 350px;  /* Responsive height for main chart on mobile */
-    }
-    
-    .metric-card {
-        padding: 1rem;
-    }
-    
-    .glass-button {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.75rem;
-    }
-}
-
-/* Animation classes */
-.fade-in {
-    animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.pulse-green {
-    animation: pulseGreen 2s infinite;
-}
-
-.pulse-red {
-    animation: pulseRed 2s infinite;
-}
-
-.pulse-blue {
-    animation: pulseBlue 2s infinite;
-}
-
-@keyframes pulseGreen {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-    50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-}
-
-@keyframes pulseRed {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-    50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-}
-
-@keyframes pulseBlue {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-    50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
-}
-
-/* Status indicators */
-.status-active {
-    background: linear-gradient(135deg, #10b981, #059669);
-    animation: pulseGreen 2s infinite;
-}
-
-.status-waiting {
-    background: linear-gradient(135deg, #6b7280, #4b5563);
-}
-
-/* Improved focus states */
-.glass-button:focus,
-.alert-input:focus {
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-}
-
-/* Loading states */
-.loading {
-    position: relative;
+.scanner-table-container, 
+.breakout-table-container {
+    background-color: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 0.5rem;
     overflow: hidden;
 }
 
-.loading::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
+.breakout-table-container table {
+    border-collapse: separate;
+    border-spacing: 0;
     width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    animation: loading 1.5s infinite;
 }
 
-@keyframes loading {
-    to { left: 100%; }
+.breakout-table-container th {
+    background-color: #374151;
+    font-weight: 500;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #4b5563;
+    padding: 1rem 1.5rem;
 }
 
-/* Tab Navigation Styles */
-.tab-button {
+.breakout-table-container td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #374151;
+    transition: background-color 0.2s ease;
+}
+
+.breakout-table-container tbody tr:hover {
+    background-color: #374151;
+}
+
+.breakout-table-container tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ============================================================================
+   SCANNER COMPONENTS
+   ============================================================================ */
+
+/* Scanner statistics cards */
+.scanner-stat-card {
+    background-color: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
     transition: all 0.3s ease;
 }
 
-.tab-button.active {
-    background-color: #3b82f6;
-    color: white;
+.scanner-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    background-color: #374151;
 }
 
-.tab-button:not(.active):hover {
-    background-color: rgba(75, 85, 99, 0.5);
-    color: white;
-}
-
-.tab-content {
-    transition: opacity 0.3s ease;
-}
-
-.tab-content.hidden {
-    display: none;
-}
-
-/* Scanner Specific Styles */
+/* Symbol chips */
 .symbol-chip {
     background: linear-gradient(145deg, #1f2937, #111827);
     border: 1px solid #374151;
@@ -227,13 +305,19 @@ canvas {
     color: #ffffff;
 }
 
-/* Signal Type Colors */
+/* ============================================================================
+   SIGNAL COMPONENTS
+   ============================================================================ */
+
+/* Signal type indicators */
 .signal-bullish {
     color: #10b981;
     background: rgba(16, 185, 129, 0.1);
     padding: 0.25rem 0.5rem;
     border-radius: 0.375rem;
     font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
 }
 
 .signal-bearish {
@@ -242,6 +326,8 @@ canvas {
     padding: 0.25rem 0.5rem;
     border-radius: 0.375rem;
     font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
 }
 
 .signal-neutral {
@@ -250,9 +336,11 @@ canvas {
     padding: 0.25rem 0.5rem;
     border-radius: 0.375rem;
     font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
 }
 
-/* Strength Indicators */
+/* Signal strength indicators */
 .strength-high {
     color: #10b981;
     font-weight: 700;
@@ -268,7 +356,46 @@ canvas {
     font-weight: 500;
 }
 
-/* Scanner Status */
+/* Signal strength bar */
+.strength-bar {
+    width: 100%;
+    height: 0.5rem;
+    background-color: #374151;
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+.strength-fill {
+    height: 100%;
+    border-radius: 0.25rem;
+    transition: width 0.3s ease;
+}
+
+.strength-fill.high {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.strength-fill.medium {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.strength-fill.low {
+    background: linear-gradient(90deg, #6b7280, #4b5563);
+}
+
+/* ============================================================================
+   STATUS INDICATORS
+   ============================================================================ */
+
+.status-active {
+    background: linear-gradient(135deg, #10b981, #059669);
+    animation: pulseGreen 2s infinite;
+}
+
+.status-waiting {
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
 .scanner-running {
     background-color: #10b981;
     animation: pulseGreen 2s infinite;
@@ -278,73 +405,18 @@ canvas {
     background-color: #ef4444;
 }
 
-/* Main Navigation Styles */
-.nav-button {
-    transition: all 0.3s ease;
-}
+/* ============================================================================
+   BREAKOUT SCANNER STYLES
+   ============================================================================ */
 
-.nav-button.active {
-    background-color: #3b82f6;
-    color: white;
-}
-
-.nav-button:not(.active):hover {
-    background-color: rgba(75, 85, 99, 0.5);
-    color: white;
-}
-
-/* Main View Styles */
-.main-view {
-    transition: opacity 0.3s ease;
-}
-
-.main-view.hidden {
-    display: none;
-}
-
-/* CoinDCX-Style Breakout Scanner */
-.breakout-table-container {
-    background: #1f2937;
-    border: 1px solid #374151;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.breakout-table-container table {
-    border-collapse: separate;
-    border-spacing: 0;
-}
-
-.breakout-table-container th {
-    background: #374151;
-    font-weight: 500;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 1px solid #4b5563;
-}
-
-.breakout-table-container td {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #374151;
-    transition: background-color 0.2s ease;
-}
-
-.breakout-table-container tbody tr:hover {
-    background-color: #374151;
-}
-
-.breakout-table-container tbody tr:last-child td {
-    border-bottom: none;
-}
-
-/* Rank Column Styling */
+/* Rank column */
 .rank-cell {
     font-weight: 600;
     color: #9ca3af;
     font-size: 0.875rem;
 }
 
-/* Crypto Name Styling */
+/* Crypto name styling */
 .crypto-name {
     display: flex;
     align-items: center;
@@ -363,14 +435,14 @@ canvas {
     font-weight: 400;
 }
 
-/* Price Styling */
+/* Price styling */
 .price-cell {
     font-weight: 600;
     color: #ffffff;
     font-family: 'Courier New', monospace;
 }
 
-/* Change Percentage Styling */
+/* Change percentage styling */
 .change-positive {
     color: #10b981;
     font-weight: 600;
@@ -386,7 +458,7 @@ canvas {
     font-weight: 600;
 }
 
-/* Breakout Badge Styling */
+/* Breakout badge styling */
 .breakout-badge {
     display: inline-flex;
     align-items: center;
@@ -422,35 +494,7 @@ canvas {
     border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-/* Scanner Statistics Cards */
-.scanner-stat-card {
-    background: linear-gradient(145deg, #374151, #1f2937);
-    border: 1px solid #4b5563;
-    transition: all 0.3s ease;
-}
-
-.scanner-stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-/* Scanner Select Styling */
-.scanner-select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 1.5em 1.5em;
-    padding-right: 2.5rem;
-    appearance: none;
-}
-
-.scanner-select:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-/* Volume Ratio Styling */
+/* Volume ratio styling */
 .volume-ratio {
     font-family: 'Courier New', monospace;
     font-weight: 600;
@@ -468,41 +512,153 @@ canvas {
     color: #6b7280;
 }
 
-/* Signal Strength Bar */
-.strength-bar {
-    width: 100%;
-    height: 0.5rem;
-    background-color: #374151;
-    border-radius: 0.25rem;
-    overflow: hidden;
-}
-
-.strength-fill {
-    height: 100%;
-    border-radius: 0.25rem;
-    transition: width 0.3s ease;
-}
-
-.strength-fill.high {
-    background: linear-gradient(90deg, #10b981, #059669);
-}
-
-.strength-fill.medium {
-    background: linear-gradient(90deg, #f59e0b, #d97706);
-}
-
-.strength-fill.low {
-    background: linear-gradient(90deg, #6b7280, #4b5563);
-}
-
-/* Time Display */
+/* Time display */
 .time-display {
     font-size: 0.75rem;
     color: #9ca3af;
     font-family: 'Courier New', monospace;
 }
 
-/* Responsive Design */
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(10px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+.pulse-green {
+    animation: pulseGreen 2s infinite;
+}
+
+.pulse-red {
+    animation: pulseRed 2s infinite;
+}
+
+.pulse-blue {
+    animation: pulseBlue 2s infinite;
+}
+
+@keyframes pulseGreen {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); 
+    }
+    50% { 
+        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); 
+    }
+}
+
+@keyframes pulseRed {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); 
+    }
+    50% { 
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); 
+    }
+}
+
+@keyframes pulseBlue {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); 
+    }
+    50% { 
+        box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); 
+    }
+}
+
+/* Loading states */
+.loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    to { left: 100%; }
+}
+
+/* ============================================================================
+   SCROLLBAR CUSTOMIZATION
+   ============================================================================ */
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1f2e;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+}
+
+/* Hide scrollbars but keep functionality for specific containers */
+.overflow-x-auto::-webkit-scrollbar {
+    height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: #374151;
+    border-radius: 3px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 3px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* ============================================================================
+   TAB CONTENT
+   ============================================================================ */
+
+.tab-content {
+    transition: opacity 0.3s ease;
+}
+
+.tab-content.hidden {
+    display: none;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+/* Tablet and below */
 @media (max-width: 1024px) {
     .breakout-table-container {
         font-size: 0.875rem;
@@ -517,9 +673,35 @@ canvas {
         align-items: flex-start;
         gap: 0.25rem;
     }
+    
+    .chart-container {
+        height: 14rem;
+    }
+    
+    .chart-container-main {
+        height: 18rem;
+    }
 }
 
+/* Mobile */
 @media (max-width: 768px) {
+    .chart-container {
+        height: 12rem;
+    }
+    
+    .chart-container-main {
+        height: 16rem;
+    }
+    
+    .metric-card {
+        padding: 1rem;
+    }
+    
+    .glass-button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
     .breakout-table-container td {
         padding: 0.5rem 0.75rem;
     }
@@ -527,5 +709,78 @@ canvas {
     .breakout-badge {
         font-size: 0.625rem;
         padding: 0.25rem 0.5rem;
+    }
+    
+    .scanner-stat-card {
+        padding: 1rem;
+    }
+    
+    .tab-button {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+    .chart-container,
+    .chart-container-main {
+        height: 10rem;
+    }
+    
+    .metric-card {
+        padding: 0.75rem;
+    }
+    
+    .glass-button {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.625rem;
+    }
+}
+
+/* ============================================================================
+   ACCESSIBILITY IMPROVEMENTS
+   ============================================================================ */
+
+/* Focus states for better accessibility */
+.glass-button:focus,
+.tab-button:focus,
+.nav-button:focus,
+.alert-input:focus,
+.scanner-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .metric-card,
+    .scanner-stat-card,
+    .dark-card {
+        border-width: 2px;
+        border-color: #ffffff;
+    }
+    
+    .glass-button {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-color: #ffffff;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    
+    .pulse-green,
+    .pulse-red,
+    .pulse-blue {
+        animation: none;
     }
 }

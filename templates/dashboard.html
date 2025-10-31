@@ -8,6 +8,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
 
+<!-- FontAwesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Dashboard specific styles -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+
 <!-- Chart.js for trading charts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -21,6 +27,12 @@
             "primary": "#13a4ec",
             "background-light": "#f6f7f8",
             "background-dark": "#101c22",
+            "crypto-green": "#10b981",
+            "crypto-red": "#ef4444", 
+            "crypto-blue": "#3b82f6",
+            "crypto-purple": "#8b5cf6",
+            "text-muted": "#9ca3af",
+            "dark-border": "#374151"
           },
           fontFamily: {
             "display": ["Space Grotesk", "sans-serif"]
@@ -35,6 +47,7 @@
       },
     }
 </script>
+
 </head>
 <body>
 <div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden font-display">
@@ -131,29 +144,18 @@
 </div>
 
 <!-- Charts Section -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-<div class="bg-white/5 border border-white/10 rounded-lg p-6">
-<h3 class="text-white text-lg font-semibold mb-4">Price & EMA Chart</h3>
-<div class="h-80">
-<canvas id="priceChart"></canvas>
-</div>
-</div>
 
-<div class="bg-white/5 border border-white/10 rounded-lg p-6">
-<h3 class="text-white text-lg font-semibold mb-4">Gap Analysis</h3>
-<div class="h-80">
-<canvas id="gapChart"></canvas>
-</div>
-</div>
-</div>
 
 <!-- Recent Signals Table -->
 <div class="bg-white/5 border border-white/10 rounded-lg p-6">
 <div class="flex items-center justify-between mb-4">
 <h3 class="text-white text-lg font-semibold">Recent Trading Signals</h3>
+<div class="flex items-center space-x-4">
+<span id="signals-last-updated" class="text-xs text-white/50"></span>
 <button class="text-primary hover:text-primary/80 text-sm font-medium" onclick="refreshSignals()">
 <span class="material-symbols-outlined text-sm mr-1">refresh</span>Refresh
 </button>
+</div>
 </div>
 <div class="overflow-x-auto">
 <table class="w-full">
@@ -179,6 +181,7 @@
 </div>
 
 <script>
+
 // Initialize dashboard data
 const dashboardData = {
     symbol: '{{ data.symbol }}',
@@ -281,10 +284,27 @@ function initCharts() {
 // Load recent signals
 async function loadSignals() {
     try {
+        // Show loading indicator if table exists
+        const tbody = document.getElementById('signals-table');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="py-4 text-center text-white/60">
+                        <span class="inline-flex items-center">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Refreshing signals...
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }
+        
         const response = await fetch('/api/signals?limit=10');
         const signals = await response.json();
         
-        const tbody = document.getElementById('signals-table');
         if (tbody && signals.length > 0) {
             tbody.innerHTML = signals.map(signal => `
                 <tr class="border-b border-white/5 hover:bg-white/5">
@@ -305,6 +325,12 @@ async function loadSignals() {
                     <td class="py-3 text-white/70 text-sm">${signal.message || 'Active'}</td>
                 </tr>
             `).join('');
+            
+            // Update last updated timestamp
+            const lastUpdatedElement = document.getElementById('signals-last-updated');
+            if (lastUpdatedElement) {
+                lastUpdatedElement.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+            }
         } else if (tbody) {
             tbody.innerHTML = `
                 <tr>
@@ -336,8 +362,11 @@ function refreshSignals() {
 
 // Auto-refresh data every 30 seconds
 function refreshData() {
-    // Reload the page to get fresh data
-    window.location.reload();
+    // Refresh signals without reloading the page
+    loadSignals();
+    
+    // You can add other refresh functions here if needed
+    // For now, we'll just refresh signals to avoid full page reload
 }
 
 // Initialize everything when page loads
@@ -345,8 +374,11 @@ document.addEventListener('DOMContentLoaded', function() {
     initCharts();
     loadSignals();
     
-    // Auto-refresh every 60 seconds
-    setInterval(refreshData, 60000);
+    // Auto-refresh signals every 30 seconds
+    setInterval(refreshData, 30000);
+    
+    // Also refresh signals every 15 seconds for more real-time updates
+    setInterval(loadSignals, 15000);
 });
 </script>
 
@@ -369,14 +401,26 @@ document.addEventListener('DOMContentLoaded', function() {
             <!-- Current Price -->
             <div class="metric-card rounded-lg p-6">
                 <div class="text-sm text-text-muted mb-2">Current Price</div>
-                <div class="text-2xl font-bold text-white" id="current-price">${{ "%.4f"|format(data.price) }}</div>
-                <div class="text-xs text-text-muted mt-1">{{ data.symbol }}</div>
+                <div class="text-2xl font-bold text-white" id="current-price">
+                    {% if data.price and data.price > 0 %}
+                        ${{ "%.4f"|format(data.price) }}
+                    {% else %}
+                        <span class="text-gray-500">---.----</span>
+                    {% endif %}
+                </div>
+                <div class="text-xs text-text-muted mt-1">{{ data.symbol or "SOL/USDT" }}</div>
             </div>
 
             <!-- EMA Value -->
             <div class="metric-card rounded-lg p-6">
-                <div class="text-sm text-text-muted mb-2">EMA ({{ data.ema_period }})</div>
-                <div class="text-2xl font-bold text-white" id="ema-value">${{ "%.4f"|format(data.ema) }}</div>
+                <div class="text-sm text-text-muted mb-2">EMA ({{ data.ema_period or 50 }})</div>
+                <div class="text-2xl font-bold text-white" id="ema-value">
+                    {% if data.ema and data.ema > 0 %}
+                        ${{ "%.4f"|format(data.ema) }}
+                    {% else %}
+                        <span class="text-gray-500">---.----</span>
+                    {% endif %}
+                </div>
                 <div class="text-xs text-text-muted mt-1">Exponential Moving Average</div>
             </div>
 
@@ -384,14 +428,22 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="metric-card rounded-lg p-6">
                 <div class="text-sm text-text-muted mb-2">Price Gap</div>
                 <div class="text-2xl font-bold text-white" id="price-gap">
-                    {% if data.gap >= 0 %}
-                        <span class="text-crypto-green">+${{ "%.4f"|format(data.gap) }}</span>
+                    {% if data.gap is defined and data.gap != 0 %}
+                        {% if data.gap >= 0 %}
+                            <span class="text-crypto-green">+${{ "%.4f"|format(data.gap) }}</span>
+                        {% else %}
+                            <span class="text-crypto-red">-${{ "%.4f"|format(-data.gap) }}</span>
+                        {% endif %}
                     {% else %}
-                        <span class="text-crypto-red">-${{ "%.4f"|format(-data.gap) }}</span>
+                        <span class="text-gray-500">---.----</span>
                     {% endif %}
                 </div>
                 <div class="text-xs text-text-muted mt-1">
-                    {% if data.gap >= 0 %}Above EMA{% else %}Below EMA{% endif %}
+                    {% if data.gap is defined and data.gap != 0 %}
+                        {% if data.gap >= 0 %}Above EMA{% else %}Below EMA{% endif %}
+                    {% else %}
+                        Waiting for data...
+                    {% endif %}
                 </div>
             </div>
 
@@ -399,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="metric-card rounded-lg p-6" id="signal-card">
                 <div class="text-sm text-text-muted mb-2">Trading Signal</div>
                 <div class="text-2xl font-bold" id="signal-status">
-                    {% if data.signal_type %}
+                    {% if data.signal_type and data.signal_type != 'HOLD' %}
                         {% if data.signal_type == 'STRONG_BUY' %}
                             <span class="text-green-400">🚀 STRONG BUY</span>
                         {% elif data.signal_type == 'BUY' %}
@@ -416,7 +468,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% endif %}
                 </div>
                 <div class="text-xs text-text-muted mt-1" id="signal-strength">
-                    {% if data.signal_strength %}
+                    {% if data.signal_strength and data.signal_strength > 0 %}
                         Confidence: {{ "%.0f"|format(data.signal_strength * 100) }}%
                     {% else %}
                         Waiting for signal
@@ -425,21 +477,8 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
 
-        <!-- Tab Navigation -->
-        <div class="mb-6">
-            <div class="flex space-x-1 bg-gray-800 rounded-lg p-1">
-                <button id="tab-charts" class="tab-button active px-4 py-2 rounded-md text-sm font-medium transition-colors bg-crypto-blue text-white" onclick="switchTab('charts')">
-                    <i class="fas fa-chart-line mr-2"></i>Charts & Analysis
-                </button>
-                <button id="tab-scanner" class="tab-button px-4 py-2 rounded-md text-sm font-medium transition-colors text-gray-400 hover:text-white" onclick="switchTab('scanner')">
-                    <i class="fas fa-radar-chart mr-2"></i>Breakout Scanner
-                </button>
-            </div>
-        </div>
-
-        <!-- Tab Content: Charts -->
-        <div id="content-charts" class="tab-content">
-
+       
+    
         <!-- Signal Details -->
         {% if data.signal_reason %}
         <div class="dark-card rounded-lg p-4 mb-6">
@@ -451,525 +490,128 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         {% endif %}
 
-        <!-- Charts Section -->
-        <div class="grid grid-cols-1 gap-6 mb-8">
-            <!-- Price & EMA Trend (Full Width for Better Visibility) -->
-            <div class="dark-card rounded-lg p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">Price & EMA Trend</h3>
-                    <div class="flex space-x-4">
-                        <!-- Zoom Controls -->
-                        <div class="flex space-x-1">
-                            <button onclick="zoomIn()" class="glass-button px-2 py-1 rounded text-sm text-crypto-green hover:text-white transition-colors" title="Zoom In">
-                                <i class="fas fa-search-plus"></i>
-                            </button>
-                            <button onclick="zoomOut()" class="glass-button px-2 py-1 rounded text-sm text-crypto-red hover:text-white transition-colors" title="Zoom Out">
-                                <i class="fas fa-search-minus"></i>
-                            </button>
-                            <button onclick="resetZoom()" class="glass-button px-2 py-1 rounded text-sm text-crypto-blue hover:text-white transition-colors" title="Reset Zoom">
-                                <i class="fas fa-expand-arrows-alt"></i>
-                            </button>
-                        </div>
-                        <!-- Time Range Buttons -->
-                        <div class="flex space-x-2">
-                            <button class="glass-button px-3 py-1 rounded text-sm text-crypto-blue" onclick="updateChartData(1)">1H</button>
-                            <button class="glass-button px-3 py-1 rounded text-sm text-gray-400" onclick="updateChartData(6)">6H</button>
-                            <button class="glass-button px-3 py-1 rounded text-sm text-gray-400" onclick="updateChartData(24)">24H</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="chart-container-main">
-                    <canvas id="priceChart"></canvas>
-                </div>
-                <!-- Chart Legend and Instructions -->
-                <div class="mt-4 p-3 bg-gray-800 rounded-lg">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div>
-                            <h4 class="font-semibold text-white mb-2">📈 Support & Resistance Legend:</h4>
-                            <div class="space-y-1">
-                                <div class="flex items-center">
-                                    <div class="w-4 h-0.5 bg-crypto-green border-dashed border mr-2"></div>
-                                    <span class="text-gray-300">S1-S3: Support levels (ascending strength)</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <div class="w-4 h-1 bg-crypto-green mr-2"></div>
-                                    <span class="text-gray-300">� ACTIVE SUPPORT: Nearest support below price</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <div class="w-4 h-0.5 bg-crypto-red border-dashed border mr-2"></div>
-                                    <span class="text-gray-300">R1-R3: Resistance levels (ascending strength)</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <div class="w-4 h-1 bg-crypto-red mr-2"></div>
-                                    <span class="text-gray-300">🔴 ACTIVE RESISTANCE: Nearest resistance above price</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-white mb-2">🎯 How to Use:</h4>
-                            <div class="space-y-1 text-gray-300">
-                                <div>• <strong>Click on any line</strong> for detailed info</div>
-                                <div>• <strong>Mouse wheel</strong> to zoom in/out</div>
-                                <div>• <strong>Ctrl+drag</strong> to pan around</div>
-                                <div>• <strong>% away</strong> shows distance from current price</div>
-                                <div>• Only <strong>top 3 closest levels</strong> shown for clarity</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Zoom Instructions -->
-                <div class="mt-2 text-xs text-text-muted text-center">
-                    💡 Click on support/resistance lines for detailed information
-                </div>
-            </div>
-
-            <!-- Live Price Chart with S/R Levels -->
-            <div class="dark-card rounded-lg p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold flex items-center">
-                        <i class="fas fa-chart-line mr-2 text-crypto-blue"></i>
-                        Live Price Movement with Support & Resistance
-                    </h3>
-                    <div class="flex space-x-4">
-                        <!-- Zoom Controls for Live Chart -->
-                        <div class="flex space-x-1">
-                            <button onclick="zoomInLive()" class="glass-button px-2 py-1 rounded text-sm text-crypto-green hover:text-white transition-colors" title="Zoom In">
-                                <i class="fas fa-search-plus"></i>
-                            </button>
-                            <button onclick="zoomOutLive()" class="glass-button px-2 py-1 rounded text-sm text-crypto-red hover:text-white transition-colors" title="Zoom Out">
-                                <i class="fas fa-search-minus"></i>
-                            </button>
-                            <button onclick="resetZoomLive()" class="glass-button px-2 py-1 rounded text-sm text-crypto-blue hover:text-white transition-colors" title="Reset Zoom">
-                                <i class="fas fa-expand-arrows-alt"></i>
-                            </button>
-                        </div>
-                        <!-- Auto-refresh toggle -->
-                        <div class="flex space-x-2">
-                            <button id="liveToggle" onclick="toggleLiveUpdates()" class="glass-button px-3 py-1 rounded text-sm text-crypto-green">
-                                <i class="fas fa-play mr-1"></i>Live
-                            </button>
-                            <button onclick="clearLiveData()" class="glass-button px-3 py-1 rounded text-sm text-gray-400" title="Clear Chart">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="chart-container-main">
-                    <canvas id="liveChart"></canvas>
-                </div>
-                <!-- Live Chart Legend -->
-                <div class="mt-4 p-3 bg-gray-800 rounded-lg">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                        <div>
-                            <h4 class="font-semibold text-white mb-2">� Live Data:</h4>
-                            <div class="space-y-1">
-                                <div class="flex items-center">
-                                    <div class="w-4 h-0.5 bg-crypto-green mr-2"></div>
-                                    <span class="text-gray-300">Real-time price updates</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <div class="w-4 h-0.5 bg-crypto-blue mr-2"></div>
-                                    <span class="text-gray-300">50-period EMA trend</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <div class="w-2 h-2 bg-crypto-green rounded-full mr-2"></div>
-                                    <span class="text-gray-300" id="liveStatus">Live updates active</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-white mb-2">🎯 Support & Resistance:</h4>
-                            <div class="space-y-1">
-                                <div class="flex items-center">
-                                    <div class="w-4 h-1 bg-crypto-green mr-2"></div>
-                                    <span class="text-gray-300">Active support levels</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <div class="w-4 h-1 bg-crypto-red mr-2"></div>
-                                    <span class="text-gray-300">Active resistance levels</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <div class="w-4 h-0.5 bg-gray-400 border-dashed border mr-2"></div>
-                                    <span class="text-gray-300">Based on 4H timeframe</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-white mb-2">⚡ Features:</h4>
-                            <div class="space-y-1 text-gray-300">
-                                <div>• <strong>Real-time updates</strong> every 5 seconds</div>
-                                <div>• <strong>Auto-scroll</strong> to latest data</div>
-                                <div>• <strong>Smart S/R detection</strong> from 4H data</div>
-                                <div>• <strong>Performance optimized</strong> for speed</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Secondary Charts -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Volume Chart -->
-                <div class="dark-card rounded-lg p-6">
-                    <h3 class="text-lg font-semibold mb-4 flex items-center">
-                        <i class="fas fa-chart-bar mr-2 text-crypto-blue"></i>
-                        Volume Analysis
-                    </h3>
-                    <div class="chart-container">
-                        <canvas id="volumeChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Price Gap Analysis -->
-                <div class="dark-card rounded-lg p-6">
-                    <h3 class="text-lg font-semibold mb-4">Price Gap Analysis</h3>
-                    <div class="chart-container">
-                        <canvas id="gapChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Recent Trading Signals -->
-        <div class="dark-card rounded-lg p-6 mb-8">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold">Recent Trading Signals</h3>
-                <button class="glass-button px-4 py-2 rounded text-crypto-blue hover:text-white transition-colors" onclick="refreshSignals()">
-                    <i class="fas fa-refresh mr-2"></i>Refresh
-                </button>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="border-b border-dark-border">
-                            <th class="text-left py-3 text-sm font-medium text-text-muted">Time</th>
-                            <th class="text-left py-3 text-sm font-medium text-text-muted">Price</th>
-                            <th class="text-left py-3 text-sm font-medium text-text-muted">EMA</th>
-                            <th class="text-left py-3 text-sm font-medium text-text-muted">Gap</th>
-                            <th class="text-left py-3 text-sm font-medium text-text-muted">Signal</th>
-                        </tr>
-                    </thead>
-                    <tbody id="signals-table">
-                        <!-- Signals will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Customizable Alerts -->
-        <div class="dark-card rounded-lg p-6 mb-8">
-            <h3 class="text-lg font-semibold mb-4">Customizable Alerts</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                    <select id="alert-condition" class="alert-input w-full p-3 rounded" title="Select alert condition">
-                        <option value="">Select Condition</option>
-                        <option value="Price crosses EMA">Price crosses EMA</option>
-                        <option value="Price above EMA">Price above EMA</option>
-                        <option value="Price below EMA">Price below EMA</option>
-                        <option value="Volume spike">Volume spike</option>
-                    </select>
-                </div>
-                <div>
-                    <input type="number" id="alert-threshold" class="alert-input w-full p-3 rounded" placeholder="Enter Threshold Value" step="0.01">
-                </div>
-                <div>
-                    <select id="alert-notification" class="alert-input w-full p-3 rounded" title="Select notification method">
-                        <option value="">Select Notification Method</option>
-                        <option value="in_app">In-App Only</option>
-                        <option value="browser">Browser Notification</option>
-                        <option value="email">Email Alert</option>
-                        <option value="sms">SMS Alert</option>
-                    </select>
-                </div>
-            </div>
-            <button onclick="createAlert()" class="bg-crypto-blue hover:bg-blue-600 px-6 py-2 rounded font-medium transition-colors">
-                Set Alert
-            </button>
-        </div>
-
-        <!-- Active Alerts -->
-        <div class="dark-card rounded-lg p-6 mb-8">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold">Active Alerts</h3>
-                <button onclick="refreshAlerts()" class="glass-button px-4 py-2 rounded text-crypto-blue hover:text-white transition-colors">
-                    <i class="fas fa-refresh mr-2"></i>Refresh
-                </button>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="border-b border-dark-border">
-                            <th class="text-left py-3 text-sm font-medium text-text-muted">Condition</th>
-                            <th class="text-left py-3 text-sm font-medium text-text-muted">Threshold</th>
-                            <th class="text-left py-3 text-sm font-medium text-text-muted">Notification Method</th>
-                            <th class="text-left py-3 text-sm font-medium text-text-muted">Status</th>
-                            <th class="text-left py-3 text-sm font-medium text-text-muted">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="alerts-table">
-                        <!-- Alerts will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        </div> <!-- End Dashboard View -->
-            <!-- Scanner Header -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-white mb-2">Top 50 Crypto Breakout Scanner</h1>
-                <p class="text-gray-400">Real-time cryptocurrency breakout detection with volume and price analysis</p>
-            </div>
-
-            <!-- Scanner Controls & Filters -->
-            <div class="flex flex-wrap items-center gap-4 mb-6">
-                <!-- Sort Controls -->
-                <div class="flex space-x-2">
-                    <select id="sort-by-rank" class="scanner-select bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                        <option value="rank">Sort by Rank</option>
-                        <option value="strength">Sort by Strength</option>
-                        <option value="volume">Sort by Volume</option>
-                    </select>
-                    <select id="sort-by-price" class="scanner-select bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                        <option value="price_desc">Sort by Price ↓</option>
-                        <option value="price_asc">Sort by Price ↑</option>
-                    </select>
-                    <select id="sort-by-change" class="scanner-select bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                        <option value="change_desc">Sort by Change ↓</option>
-                        <option value="change_asc">Sort by Change ↑</option>
-                    </select>
-                </div>
-
-                <!-- Scanner Toggle -->
-                <div class="ml-auto flex items-center space-x-4">
-                    <div class="flex items-center space-x-2">
-                        <div id="scanner-status-dot" class="w-2 h-2 bg-red-500 rounded-full"></div>
-                        <span id="scanner-status-label" class="text-sm text-gray-400">Scanner Stopped</span>
-                    </div>
-                    <button id="scanner-toggle-btn" onclick="toggleBreakoutScanner()" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium transition-colors text-white">
-                        <i class="fas fa-play mr-2"></i>Start Scanner
-                    </button>
-                </div>
-            </div>
-
-            <!-- Scanner Statistics -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                <div class="scanner-stat-card bg-gray-800 rounded-lg p-4">
-                    <div class="text-2xl font-bold text-white" id="total-scanned">0</div>
-                    <div class="text-sm text-gray-400">Symbols Scanned</div>
-                </div>
-                <div class="scanner-stat-card bg-gray-800 rounded-lg p-4">
-                    <div class="text-2xl font-bold text-green-400" id="breakout-count">0</div>
-                    <div class="text-sm text-gray-400">Breakouts Detected</div>
-                </div>
-                <div class="scanner-stat-card bg-gray-800 rounded-lg p-4">
-                    <div class="text-2xl font-bold text-blue-400" id="bullish-count">0</div>
-                    <div class="text-sm text-gray-400">Bullish Signals</div>
-                </div>
-                <div class="scanner-stat-card bg-gray-800 rounded-lg p-4">
-                    <div class="text-2xl font-bold text-red-400" id="bearish-count">0</div>
-                    <div class="text-sm text-gray-400">Bearish Signals</div>
-                </div>
-                <div class="scanner-stat-card bg-gray-800 rounded-lg p-4">
-                    <div class="text-2xl font-bold text-yellow-400" id="success-rate">0%</div>
-                    <div class="text-sm text-gray-400">Success Rate</div>
-                </div>
-            </div>
-
-            <!-- Breakout Scanner Table -->
-            <div class="breakout-table-container bg-gray-900 rounded-lg overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-800">
-                            <tr>
-                                <th class="text-left py-4 px-6 text-gray-400 font-medium">#</th>
-                                <th class="text-left py-4 px-6 text-gray-400 font-medium">Name</th>
-                                <th class="text-left py-4 px-6 text-gray-400 font-medium">Price</th>
-                                <th class="text-left py-4 px-6 text-gray-400 font-medium">24h Change</th>
-                                <th class="text-left py-4 px-6 text-gray-400 font-medium">Volume Ratio</th>
-                                <th class="text-left py-4 px-6 text-gray-400 font-medium">Signal Strength</th>
-                                <th class="text-left py-4 px-6 text-gray-400 font-medium">Breakout</th>
-                                <th class="text-left py-4 px-6 text-gray-400 font-medium">Time</th>
-                            </tr>
-                        </thead>
-                        <tbody id="breakout-table-body" class="divide-y divide-gray-800">
-                            <!-- Loading state -->
-                            <tr>
-                                <td colspan="8" class="text-center py-12">
-                                    <div class="flex flex-col items-center space-y-4">
-                                        <i class="fas fa-radar-chart text-4xl text-gray-600"></i>
-                                        <div class="text-gray-400">
-                                            <div class="text-lg font-medium">Breakout Scanner Ready</div>
-                                            <div class="text-sm">Click "Start Scanner" to begin monitoring crypto breakouts</div>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Scanner Settings Panel -->
-            <div class="mt-8 bg-gray-800 rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-white mb-4">Scanner Settings</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Scan Interval</label>
-                        <select id="scanner-interval" class="scanner-select w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                            <option value="60">1 Minute</option>
-                            <option value="180">3 Minutes</option>
-                            <option value="300">5 Minutes</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Volume Threshold</label>
-                        <select id="volume-threshold" class="scanner-select w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                            <option value="1.5">50% Above Average</option>
-                            <option value="2.0">100% Above Average</option>
-                            <option value="3.0">200% Above Average</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Price Change Threshold</label>
-                        <select id="price-threshold" class="scanner-select w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                            <option value="0.02">2% Change</option>
-                            <option value="0.05">5% Change</option>
-                            <option value="0.10">10% Change</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
+      
+           
 
         </div>
 
-        <!-- Database Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="dark-card rounded-lg p-6 text-center">
-                <div class="text-2xl font-bold text-crypto-blue" id="price-records">0</div>
-                <div class="text-sm text-text-muted">Price Records</div>
-            </div>
-            <div class="dark-card rounded-lg p-6 text-center">
-                <div class="text-2xl font-bold text-crypto-green" id="signal-records">0</div>
-                <div class="text-sm text-text-muted">Trading Signals</div>
-            </div>
-            <div class="dark-card rounded-lg p-6 text-center">
-                <div class="text-2xl font-bold text-crypto-purple" id="db-size">0</div>
-                <div class="text-sm text-text-muted">Database Size (MB)</div>
-            </div>
-            <div class="dark-card rounded-lg p-6 text-center">
-                <button onclick="manualCleanup()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-medium transition-colors text-sm">
-                    <i class="fas fa-trash mr-2"></i>Cleanup DB
-                </button>
-                <div class="text-xs text-text-muted mt-2">Manual cleanup</div>
-            </div>
-        </div>
-        </div> <!-- End Dashboard View -->
 
-        <!-- Scanner View (CoinDCX Style) -->
-        <div id="view-scanner" class="main-view hidden">
-            <!-- Scanner Header -->
-            <div class="mb-8">
-                <h1 class="text-4xl font-bold mb-2">Top 50 Crypto Breakout Scanner</h1>
-                <p class="text-gray-400">Real-time breakout detection with volume and price analysis</p>
-            </div>
-
-            <!-- Sort Controls -->
-            <div class="flex items-center space-x-4 mb-6">
-                <div>
-                    <select id="sort-by-rank" class="scanner-select bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                        <option value="rank">Sort by Rank</option>
-                        <option value="strength">Sort by Strength</option>
-                        <option value="volume">Sort by Volume</option>
-                    </select>
-                </div>
-                <div>
-                    <select id="sort-by-price" class="scanner-select bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                        <option value="price_desc">Sort by Price ↓</option>
-                        <option value="price_asc">Sort by Price ↑</option>
-                    </select>
-                </div>
-                <div>
-                    <select id="sort-by-change" class="scanner-select bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                        <option value="change_desc">Sort by Change ↓</option>
-                        <option value="change_asc">Sort by Change ↑</option>
-                    </select>
-                </div>
-                <div class="flex-1"></div>
-                <button id="scanner-toggle" onclick="toggleBreakoutScanner()" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-medium transition-colors">
-                    <i class="fas fa-play mr-2"></i>Start Scanner
-                </button>
-            </div>
-
-            <!-- Main Scanner Table -->
-            <div class="scanner-table-container bg-gray-900 rounded-lg overflow-hidden">
-                <table class="scanner-table w-full">
-                    <thead class="bg-gray-800">
-                        <tr>
-                            <th class="text-left py-4 px-6 text-gray-400 font-medium">#</th>
-                            <th class="text-left py-4 px-6 text-gray-400 font-medium">Name</th>
-                            <th class="text-left py-4 px-6 text-gray-400 font-medium">Price</th>
-                            <th class="text-left py-4 px-6 text-gray-400 font-medium">24h Change</th>
-                            <th class="text-left py-4 px-6 text-gray-400 font-medium">Volume</th>
-                            <th class="text-left py-4 px-6 text-gray-400 font-medium">Breakout</th>
-                        </tr>
-                    </thead>
-                    <tbody id="scanner-table-body">
-                        <tr>
-                            <td colspan="6" class="text-center py-12 text-gray-500">
-                                <i class="fas fa-search text-3xl mb-4 block"></i>
-                                <div class="text-lg mb-2">No breakout signals detected</div>
-                                <div class="text-sm">Start the scanner to begin monitoring symbols</div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Scanner Settings Panel -->
-            <div class="mt-8 bg-gray-900 rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-4 flex items-center">
-                    <i class="fas fa-cog mr-2"></i>Scanner Settings
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Scan Interval</label>
-                        <select id="scanner-interval" class="scanner-select w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                            <option value="60">1 Minute</option>
-                            <option value="180">3 Minutes</option>
-                            <option value="300">5 Minutes</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Volume Threshold</label>
-                        <select id="volume-threshold" class="scanner-select w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                            <option value="1.5">50% Above Average</option>
-                            <option value="2.0">100% Above Average</option>
-                            <option value="3.0">200% Above Average</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Price Movement</label>
-                        <select id="price-threshold" class="scanner-select w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
-                            <option value="0.02">2% Change</option>
-                            <option value="0.05">5% Change</option>
-                            <option value="0.10">10% Change</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Alerts View -->
-        <div id="view-alerts" class="main-view hidden">
-            <h1 class="text-3xl font-bold mb-6">Price Alerts</h1>
-            <div class="text-gray-400">Alert management interface will be implemented here.</div>
-        </div>
-
-        <!-- Settings View -->
-        <div id="view-settings" class="main-view hidden">
-            <h1 class="text-3xl font-bold mb-6">Settings</h1>
-            <div class="text-gray-400">Application settings will be implemented here.</div>
-        </div>
+        
+       
     </div>
+
+    <!-- Essential JavaScript functions -->
+    <script>
+    // Missing function implementations to fix console errors
+    
+    // Tab switching function
+    function switchTab(tabName) {
+        // Hide all tab contents
+        const contents = document.querySelectorAll('.tab-content');
+        contents.forEach(content => content.classList.add('hidden'));
+        
+        // Remove active class from all tab buttons
+        const buttons = document.querySelectorAll('.tab-button');
+        buttons.forEach(btn => btn.classList.remove('active', 'bg-crypto-blue', 'text-white'));
+        buttons.forEach(btn => btn.classList.add('text-gray-400'));
+        
+        // Show selected tab content
+        const selectedContent = document.getElementById(`content-${tabName}`);
+        if (selectedContent) selectedContent.classList.remove('hidden');
+        
+        // Add active class to selected button
+        const selectedButton = document.getElementById(`tab-${tabName}`);
+        if (selectedButton) {
+            selectedButton.classList.add('active', 'bg-crypto-blue', 'text-white');
+            selectedButton.classList.remove('text-gray-400');
+        }
+    }
+    
+    // Chart zoom functions (placeholder implementations)
+    function zoomIn() { console.log('Zoom in functionality would be implemented here'); }
+    function zoomOut() { console.log('Zoom out functionality would be implemented here'); }
+    function resetZoom() { console.log('Reset zoom functionality would be implemented here'); }
+    function zoomInLive() { console.log('Live zoom in functionality would be implemented here'); }
+    function zoomOutLive() { console.log('Live zoom out functionality would be implemented here'); }
+    function resetZoomLive() { console.log('Live reset zoom functionality would be implemented here'); }
+    
+    // Chart data update function
+    function updateChartData(hours) {
+        console.log(`Update chart data for ${hours} hours`);
+        // This would update the chart with data for the specified time range
+    }
+    
+    // Live updates toggle
+    function toggleLiveUpdates() {
+        const toggle = document.getElementById('liveToggle');
+        const icon = toggle.querySelector('i');
+        
+        if (toggle.classList.contains('text-crypto-green')) {
+            toggle.classList.remove('text-crypto-green');
+            toggle.classList.add('text-gray-400');
+            icon.classList.remove('fa-pause');
+            icon.classList.add('fa-play');
+            toggle.innerHTML = '<i class="fas fa-play mr-1"></i>Paused';
+        } else {
+            toggle.classList.remove('text-gray-400');
+            toggle.classList.add('text-crypto-green');
+            icon.classList.remove('fa-play');
+            icon.classList.add('fa-pause');
+            toggle.innerHTML = '<i class="fas fa-pause mr-1"></i>Live';
+        }
+    }
+    
+    // Clear live data
+    function clearLiveData() {
+        console.log('Clear live data functionality would be implemented here');
+    }
+    
+    // Alert management functions
+    function createAlert() {
+        const condition = document.getElementById('alert-condition')?.value;
+        const threshold = document.getElementById('alert-threshold')?.value;
+        const notification = document.getElementById('alert-notification')?.value;
+        
+        if (!condition || !threshold || !notification) {
+            alert('Please fill in all alert fields');
+            return;
+        }
+        
+        console.log('Creating alert:', { condition, threshold, notification });
+        // Implementation would create the alert via API
+    }
+    
+    function refreshAlerts() {
+        console.log('Refreshing alerts...');
+        // Implementation would reload alerts from API
+    }
+    
+    // Scanner functions
+    function toggleBreakoutScanner() {
+        const btn = document.getElementById('scanner-toggle-btn') || document.getElementById('scanner-toggle');
+        const icon = btn?.querySelector('i');
+        
+        if (btn?.textContent.includes('Start')) {
+            btn.innerHTML = '<i class="fas fa-stop mr-2"></i>Stop Scanner';
+            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'bg-green-600', 'hover:bg-green-700');
+            btn.classList.add('bg-red-600', 'hover:bg-red-700');
+            console.log('Scanner started');
+        } else {
+            btn.innerHTML = '<i class="fas fa-play mr-2"></i>Start Scanner';
+            btn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            console.log('Scanner stopped');
+        }
+    }
+    
+    // Database cleanup function
+    function manualCleanup() {
+        if (confirm('Are you sure you want to cleanup old database records?')) {
+            console.log('Manual database cleanup initiated');
+            // Implementation would call cleanup API
+        }
+    }
+    </script>
 
     <!-- Custom Dashboard JavaScript -->
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>

@@ -793,8 +793,10 @@ class TradingDatabase:
                     if offset:
                         query += f' OFFSET {offset}'
                 
+                print(f"🔍 Executing SQL query: {query}")
                 cursor.execute(query)
                 rows = cursor.fetchall()
+                print(f"📊 SQL returned {len(rows)} rows")
                 
                 # Convert to list of dictionaries
                 columns = ['symbol', 'futures_symbol', 'current_price', 'ema_50', 'price_diff',
