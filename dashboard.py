@@ -1,4 +1,134 @@
-<!DOCTYPE html>
+#!/usr/bin/env python3
+"""
+Real-time Trading Dashboard
+Web-based monitoring dashboard for trading signals
+"""
+
+from flask import Flask, render_template, jsonify
+from datetime import datetime
+import json
+import threading
+import time
+from ema9_api import EMA9API
+
+
+app = Flask(__name__)
+
+# Global variables for real-time data
+current_data = {}
+signal_history = []
+last_update = None
+monitor_thread = None
+monitoring = False
+
+
+class DashboardMonitor:
+    """Background monitoring for dashboard"""
+    
+    def __init__(self):
+        self.api = EMA9API()
+        self.running = False
+    
+    def update_data(self):
+        """Update current market data and signals"""
+        global current_data, signal_history, last_update
+        
+        try:
+            # Get comprehensive data
+            data = self.api.get_ema9_data()
+            signal = self.api.get_trading_signal()
+            
+            current_data = {
+                'timestamp': datetime.now().isoformat(),
+                'price': data.get('current_price', 0),
+                'ema20': data.get('current_ema20', 0),
+                'macd': data.get('current_macd', 0),
+                'rsi7': data.get('current_rsi7', 0),
+                'rsi14': data.get('current_rsi14', 0),
+                'signal_direction': signal.get('signal_direction', 'HOLD'),
+                'confidence': signal.get('confidence', 0),
+                'signal_strength': signal.get('signal_strength', 0),
+                'entry_price': signal.get('entry_price'),
+                'stop_loss': signal.get('stop_loss'),
+                'take_profit_1': signal.get('take_profit_1'),
+                'take_profit_2': signal.get('take_profit_2'),
+                'take_profit_3': signal.get('take_profit_3'),
+                'position_size_pct': signal.get('position_size_pct', 0),
+                'signal_factors': signal.get('signal_factors', [])
+            }
+            
+            # Add to history if signal changed
+            if (not signal_history or 
+                signal_history[-1].get('signal_direction') != current_data['signal_direction']):
+                
+                signal_history.append(current_data.copy())
+                # Keep only last 50 signals
+                if len(signal_history) > 50:
+                    signal_history.pop(0)
+            
+            last_update = datetime.now()
+            
+        except Exception as e:
+            print(f"Error updating data: {str(e)}")
+    
+    def run(self):
+        """Run continuous monitoring"""
+        self.running = True
+        
+        while self.running:
+            self.update_data()
+            time.sleep(60)  # Update every minute
+    
+    def stop(self):
+        """Stop monitoring"""
+        self.running = False
+
+
+@app.route('/')
+def dashboard():
+    """Main dashboard page"""
+    return render_template('dashboard.html')
+
+
+@app.route('/api/data')
+def get_data():
+    """Get current market data"""
+    return jsonify({
+        'current_data': current_data,
+        'signal_history': signal_history[-10:],  # Last 10 signals
+        'last_update': last_update.isoformat() if last_update else None,
+        'status': 'active' if monitoring else 'inactive'
+    })
+
+
+@app.route('/api/start_monitoring')
+def start_monitoring():
+    """Start background monitoring"""
+    global monitor_thread, monitoring
+    
+    if not monitoring:
+        monitor = DashboardMonitor()
+        monitor_thread = threading.Thread(target=monitor.run)
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        monitoring = True
+    
+    return jsonify({'status': 'started'})
+
+
+@app.route('/api/stop_monitoring')
+def stop_monitoring():
+    """Stop background monitoring"""
+    global monitoring
+    
+    if monitoring and monitor_thread:
+        monitoring = False
+    
+    return jsonify({'status': 'stopped'})
+
+
+# Create basic dashboard template
+dashboard_html = '''<!DOCTYPE html>
 <html>
 <head>
     <title>SOL/USDT Trading Monitor</title>
@@ -161,4 +291,21 @@
         }
     </script>
 </body>
-</html>
+</html>'''
+
+# Ensure templates directory exists and create dashboard template
+import os
+if not os.path.exists('templates'):
+    os.makedirs('templates')
+
+with open('templates/dashboard.html', 'w', encoding='utf-8') as f:
+    f.write(dashboard_html)
+
+
+if __name__ == '__main__':
+    print("🚀 Starting Trading Dashboard...")
+    print("📊 Dashboard available at: http://localhost:5000")
+    print("🔍 Click 'Start Monitoring' to begin real-time monitoring")
+    print("Press Ctrl+C to stop the server")
+    
+    app.run(debug=False, host='0.0.0.0', port=5000)

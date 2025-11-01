@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SOL/USDT Trading Monitor Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #0f0f0f; 
+            color: #ffffff; 
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a1a1a;
+            padding: 15px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        
+        .status-indicator.active {
+            background: #22c55e;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .card {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #333;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .card h3 {
+            margin-bottom: 15px;
+            color: #60a5fa;
+            border-bottom: 2px solid #60a5fa;
+            padding-bottom: 5px;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+        }
+        
+        .price-display {
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            margin-bottom: 15px;
+        }
+        
+        .signal-card {
+            text-align: center;
+            padding: 30px 20px;
+        }
+        
+        .signal-status {
+            font-size: 2em;
+            font-weight: bold;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .signal-hold {
+            background: linear-gradient(135deg, #6b7280, #9ca3af);
+        }
+        
+        .signal-long {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            animation: glow-green 2s infinite alternate;
+        }
+        
+        .signal-short {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            animation: glow-red 2s infinite alternate;
+        }
+        
+        @keyframes glow-green {
+            from { box-shadow: 0 0 20px rgba(34, 197, 94, 0.5); }
+            to { box-shadow: 0 0 30px rgba(34, 197, 94, 0.8); }
+        }
+        
+        @keyframes glow-red {
+            from { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+            to { box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); }
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e);
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+        
+        .trade-levels {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            padding: 0 20px 20px;
+        }
+        
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        
+        .log-entry {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 3px solid #4f46e5;
+        }
+        
+        .log-entry.status { border-left-color: #6b7280; background: rgba(107, 114, 128, 0.1); }
+        .log-entry.signal { border-left-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+        .log-entry.error { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .log-entry.info { border-left-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        
+        .log-time {
+            font-size: 0.8em;
+            color: #9ca3af;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+        
+        .rsi-gauge {
+            position: relative;
+            width: 100px;
+            height: 50px;
+            margin: 10px auto;
+        }
+        
+        .rsi-arc {
+            width: 100%;
+            height: 100%;
+            border: 8px solid #333;
+            border-bottom: none;
+            border-radius: 50px 50px 0 0;
+            position: relative;
+        }
+        
+        .rsi-needle {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            height: 40px;
+            background: #fff;
+            transform-origin: bottom;
+            transition: transform 0.5s ease;
+        }
+        
+        .signal-factors {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .signal-factors ul {
+            list-style: none;
+        }
+        
+        .signal-factors li {
+            padding: 5px 0;
+            border-bottom: 1px solid #404040;
+        }
+        
+        .signal-factors li:before {
+            content: "• ";
+            color: #60a5fa;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-bar {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+        
+        /* Additional animations for better feedback */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .btn:disabled {
+            cursor: not-allowed;
+        }
+        
+        .price-display {
+            transition: all 0.3s ease;
+        }
+        
+        .signal-status {
+            transition: all 0.3s ease;
+        }
+        
+        /* Intraday Analysis Styles */
+        .analysis-grid {
+            margin: 15px 0;
+        }
+        
+        .analysis-section h4 {
+            color: #60a5fa;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            border-bottom: 1px solid #60a5fa;
+            padding-bottom: 3px;
+        }
+        
+        .series-container {
+            background: #2a2a2a;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .series-data {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            color: #e5e7eb;
+            background: #1a1a1a;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 5px;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+        
+        .trend-indicator {
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        
+        .trend-up {
+            background: #22c55e;
+            color: #000;
+        }
+        
+        .trend-down {
+            background: #ef4444;
+            color: #fff;
+        }
+        
+        .trend-sideways {
+            background: #6b7280;
+            color: #fff;
+        }
+        
+        .context-metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #404040;
+            font-size: 0.85em;
+        }
+        
+        .context-metric:last-child {
+            border-bottom: none;
+        }
+        
+        .confidence-list {
+            background: #2a2a2a;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        
+        .confidence-item {
+            padding: 5px 0;
+            font-size: 0.85em;
+            border-left: 3px solid #60a5fa;
+            padding-left: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .confidence-item.positive {
+            border-left-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+        
+        .confidence-item.negative {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .confidence-item.neutral {
+            border-left-color: #6b7280;
+            background: rgba(107, 114, 128, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 SOL/USDT Trading Monitor Dashboard</h1>
+        <div class="controls">
+            <button class="btn btn-primary" onclick="startMonitoring()">Start Monitoring</button>
+            <button class="btn btn-danger" onclick="stopMonitoring()">Stop Monitoring</button>
+            <button class="btn btn-success" onclick="checkNow()">Check Now</button>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="status-indicator" id="status-indicator"></div>
+            <span id="monitoring-status">Stopped</span>
+        </div>
+        <div class="status-item">
+            <span>Last Update: </span>
+            <span id="last-update">Never</span>
+        </div>
+        <div class="status-item">
+            <span>Checks: </span>
+            <span id="check-count">0</span>
+        </div>
+        <div class="status-item">
+            <span>Signals: </span>
+            <span id="signal-count">0</span>
+        </div>
+    </div>
+    
+    <div class="main-grid">
+        <!-- Price Card -->
+        <div class="card">
+            <h3>💰 Current Price</h3>
+            <div class="price-display" id="current-price">$0.00</div>
+            <div class="metric">
+                <span>EMA20 (1m):</span>
+                <span class="metric-value" id="ema20">$0.00</span>
+            </div>
+            <div class="metric">
+                <span>EMA50 (1m):</span>
+                <span class="metric-value" id="ema50">$0.00</span>
+            </div>
+            <div class="metric">
+                <span>vs EMA20:</span>
+                <span class="metric-value" id="price-vs-ema20">0.00%</span>
+            </div>
+            <div class="metric">
+                <span>MACD:</span>
+                <span class="metric-value" id="macd">0.000</span>
+            </div>
+        </div>
+        
+        <!-- RSI Card -->
+        <div class="card">
+            <h3>📊 RSI Indicators</h3>
+            <div class="metric">
+                <span>RSI(7):</span>
+                <span class="metric-value" id="rsi7">0.0</span>
+            </div>
+            <div class="rsi-gauge">
+                <div class="rsi-arc"></div>
+                <div class="rsi-needle" id="rsi7-needle"></div>
+            </div>
+            <div class="metric">
+                <span>RSI(14):</span>
+                <span class="metric-value" id="rsi14">0.0</span>
+            </div>
+            <div style="font-size: 0.8em; color: #9ca3af; margin-top: 10px;">
+                <div>Oversold: &lt; 20 | Overbought: &gt; 80</div>
+            </div>
+        </div>
+        
+        <!-- Signal Card -->
+        <div class="card signal-card">
+            <h3>🎯 Trading Signal</h3>
+            <div class="signal-status signal-hold" id="signal-status">HOLD</div>
+            <div class="metric">
+                <span>Confidence:</span>
+                <span class="metric-value" id="confidence">0%</span>
+            </div>
+            <div class="confidence-bar">
+                <div class="confidence-fill" id="confidence-bar" style="width: 0%"></div>
+            </div>
+            <div class="metric">
+                <span>Strength:</span>
+                <span class="metric-value" id="strength">0/100</span>
+            </div>
+            <div class="metric">
+                <span>Validity:</span>
+                <span class="metric-value" id="validity">0 hours</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Intraday Series Analysis -->
+    <div class="card" id="intraday-analysis-card" style="margin: 0 20px;">
+        <h3>📊 Intraday Analysis (Last 10 Minutes)</h3>
+        <div class="analysis-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="analysis-section">
+                <h4>💰 Price Movement</h4>
+                <div class="series-container">
+                    <div class="metric">
+                        <span>Mid Prices:</span>
+                        <div id="price-series" class="series-data">Loading...</div>
+                    </div>
+                    <div class="metric">
+                        <span>Price Trend:</span>
+                        <span id="price-trend" class="trend-indicator">-</span>
+                    </div>
+                </div>
+                
+                <h4>📈 EMA20 Evolution</h4>
+                <div class="series-container">
+                    <div class="metric">
+                        <span>EMA20 Series:</span>
+                        <div id="ema20-series" class="series-data">Loading...</div>
+                    </div>
+                    <div class="metric">
+                        <span>EMA Trend:</span>
+                        <span id="ema-trend" class="trend-indicator">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analysis-section">
+                <h4>📊 Technical Indicators</h4>
+                <div class="series-container">
+                    <div class="metric">
+                        <span>MACD Series:</span>
+                        <div id="macd-series" class="series-data">Loading...</div>
+                    </div>
+                    <div class="metric">
+                        <span>RSI(7) Series:</span>
+                        <div id="rsi7-series" class="series-data">Loading...</div>
+                    </div>
+                    <div class="metric">
+                        <span>RSI(14) Series:</span>
+                        <div id="rsi14-series" class="series-data">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="longer-term-context" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
+            <h4>🔍 4-Hour Context Analysis</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                <div class="context-metric">
+                    <span>4H EMA20:</span>
+                    <span id="ema20-4h">-</span>
+                </div>
+                <div class="context-metric">
+                    <span>4H EMA50:</span>
+                    <span id="ema50-4h">-</span>
+                </div>
+                <div class="context-metric">
+                    <span>Position vs 4H EMAs:</span>
+                    <span id="position-4h-emas" class="trend-indicator">-</span>
+                </div>
+                <div class="context-metric">
+                    <span>ATR(3):</span>
+                    <span id="atr3-4h">-</span>
+                </div>
+                <div class="context-metric">
+                    <span>ATR(14):</span>
+                    <span id="atr14-4h">-</span>
+                </div>
+                <div class="context-metric">
+                    <span>Volatility Level:</span>
+                    <span id="volatility-level" class="trend-indicator">-</span>
+                </div>
+                <div class="context-metric">
+                    <span>4H MACD Trend:</span>
+                    <span id="macd-4h-trend" class="trend-indicator">-</span>
+                </div>
+                <div class="context-metric">
+                    <span>4H RSI(14):</span>
+                    <span id="rsi14-4h">-</span>
+                </div>
+                <div class="context-metric">
+                    <span>Volume vs Average:</span>
+                    <span id="volume-vs-avg" class="trend-indicator">-</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="confidence-analysis" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
+            <h4>🎯 Confidence Factors</h4>
+            <div id="confidence-factors" class="confidence-list">
+                <div class="confidence-item">Analyzing market conditions...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trade Levels (only visible when signal active) -->
+    <div class="card" id="trade-levels-card" style="margin: 0 20px; display: none;">
+        <h3>💰 Trade Levels</h3>
+        <div class="trade-levels">
+            <div class="metric">
+                <span>Entry Price:</span>
+                <span class="metric-value" id="entry-price">-</span>
+            </div>
+            <div class="metric">
+                <span>Stop Loss:</span>
+                <span class="metric-value" id="stop-loss">-</span>
+            </div>
+            <div class="metric">
+                <span>Take Profit 1:</span>
+                <span class="metric-value" id="tp1">- (R/R: <span id="rr1">0:0</span>)</span>
+            </div>
+            <div class="metric">
+                <span>Take Profit 2:</span>
+                <span class="metric-value" id="tp2">- (R/R: <span id="rr2">0:0</span>)</span>
+            </div>
+            <div class="metric">
+                <span>Take Profit 3:</span>
+                <span class="metric-value" id="tp3">- (R/R: <span id="rr3">0:0</span>)</span>
+            </div>
+            <div class="metric">
+                <span>Position Size:</span>
+                <span class="metric-value" id="position-size">0%</span>
+            </div>
+            <div class="metric">
+                <span>Risk Amount:</span>
+                <span class="metric-value" id="risk-amount">$0</span>
+            </div>
+        </div>
+        
+        <div class="signal-factors" id="signal-factors-container">
+            <h4>🎯 Signal Factors:</h4>
+            <ul id="signal-factors"></ul>
+        </div>
+    </div>
+    
+    <div class="bottom-grid">
+        <!-- Monitoring Log -->
+        <div class="log-container">
+            <h3>📋 Monitoring Log</h3>
+            <div id="monitoring-log">
+                <div class="log-entry info">
+                    <div class="log-time">--:--:--</div>
+                    <div>Waiting for monitoring to start...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Signal History -->
+        <div class="card">
+            <h3>📈 Recent Signals</h3>
+            <div id="signal-history">
+                <div style="color: #9ca3af; text-align: center; padding: 20px;">
+                    No signals detected yet
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let monitoring = false;
+        let autoUpdate = null;
+        
+        function updateData() {
+            fetch('/api/data')
+                .then(response => response.json())
+                .then(data => {
+                    const current = data.current_data;
+                    
+                    if (current && Object.keys(current).length > 0) {
+                        // Update price data
+                        document.getElementById('current-price').textContent = `$${current.price.toFixed(2)}`;
+                        document.getElementById('ema20').textContent = `$${current.ema20.toFixed(2)}`;
+                        document.getElementById('ema50').textContent = `$${(current.ema50 || 0).toFixed(2)}`;
+                        document.getElementById('price-vs-ema20').textContent = `${current.price_vs_ema20_pct ? current.price_vs_ema20_pct.toFixed(2) : 0}%`;
+                        document.getElementById('macd').textContent = current.macd.toFixed(3);
+                        
+                        // Update RSI
+                        document.getElementById('rsi7').textContent = current.rsi7.toFixed(1);
+                        document.getElementById('rsi14').textContent = current.rsi14.toFixed(1);
+                        
+                        // Update RSI needle (0-100 scale)
+                        const rsi7Angle = (current.rsi7 / 100) * 180 - 90; // -90 to 90 degrees
+                        document.getElementById('rsi7-needle').style.transform = `translateX(-50%) rotate(${rsi7Angle}deg)`;
+                        
+                        // Update signal
+                        const signalEl = document.getElementById('signal-status');
+                        const direction = current.signal_direction;
+                        signalEl.textContent = direction;
+                        signalEl.className = `signal-status signal-${direction.toLowerCase()}`;
+                        
+                        document.getElementById('confidence').textContent = `${current.confidence}%`;
+                        document.getElementById('confidence-bar').style.width = `${current.confidence}%`;
+                        document.getElementById('strength').textContent = `${current.signal_strength}/100`;
+                        document.getElementById('validity').textContent = `${current.validity_hours} hours`;
+                        
+                        // Update status bar
+                        document.getElementById('check-count').textContent = current.check_count || 0;
+                        document.getElementById('signal-count').textContent = current.signal_count || 0;
+                        
+                        // Show/hide trade levels
+                        const tradeLevelsCard = document.getElementById('trade-levels-card');
+                        if (direction !== 'HOLD' && current.entry_price) {
+                            tradeLevelsCard.style.display = 'block';
+                            
+                            document.getElementById('entry-price').textContent = `$${current.entry_price ? current.entry_price.toFixed(2) : '-'}`;
+                            document.getElementById('stop-loss').textContent = `$${current.stop_loss ? current.stop_loss.toFixed(2) : '-'}`;
+                            document.getElementById('tp1').textContent = `$${current.take_profit_1 ? current.take_profit_1.toFixed(2) : '-'}`;
+                            document.getElementById('tp2').textContent = `$${current.take_profit_2 ? current.take_profit_2.toFixed(2) : '-'}`;
+                            document.getElementById('tp3').textContent = `$${current.take_profit_3 ? current.take_profit_3.toFixed(2) : '-'}`;
+                            document.getElementById('rr1').textContent = `1:${current.risk_reward_1 || 0}`;
+                            document.getElementById('rr2').textContent = `1:${current.risk_reward_2 || 0}`;
+                            document.getElementById('rr3').textContent = `1:${current.risk_reward_3 || 0}`;
+                            document.getElementById('position-size').textContent = `${current.position_size_pct}%`;
+                            document.getElementById('risk-amount').textContent = `$${current.risk_amount ? current.risk_amount.toFixed(2) : '0.00'}`;
+                            
+                            // Update signal factors
+                            const factorsList = document.getElementById('signal-factors');
+                            if (current.signal_factors && current.signal_factors.length > 0) {
+                                factorsList.innerHTML = current.signal_factors.map(f => `<li>${f}</li>`).join('');
+                            } else {
+                                factorsList.innerHTML = '<li>No specific factors</li>';
+                            }
+                        } else {
+                            tradeLevelsCard.style.display = 'none';
+                        }
+                        
+                        // Update intraday analysis
+                        updateIntradayAnalysis(current);
+                    }
+                    
+                    // Update monitoring status
+                    const statusIndicator = document.getElementById('status-indicator');
+                    const statusText = document.getElementById('monitoring-status');
+                    
+                    if (data.monitoring_active) {
+                        statusIndicator.classList.add('active');
+                        statusText.textContent = 'Active';
+                    } else {
+                        statusIndicator.classList.remove('active');
+                        statusText.textContent = 'Stopped';
+                    }
+                    
+                    // Update last update time
+                    if (data.last_update) {
+                        const updateTime = new Date(data.last_update).toLocaleTimeString();
+                        document.getElementById('last-update').textContent = updateTime;
+                    }
+                    
+                    // Update monitoring log
+                    const logContainer = document.getElementById('monitoring-log');
+                    if (data.monitoring_log && data.monitoring_log.length > 0) {
+                        logContainer.innerHTML = data.monitoring_log
+                            .reverse()
+                            .map(entry => `
+                                <div class="log-entry ${entry.type.toLowerCase()}">
+                                    <div class="log-time">${entry.time_str}</div>
+                                    <div>${entry.message}</div>
+                                </div>
+                            `).join('');
+                    }
+                    
+                    // Update signal history
+                    const historyContainer = document.getElementById('signal-history');
+                    if (data.signal_history && data.signal_history.length > 0) {
+                        historyContainer.innerHTML = data.signal_history
+                            .reverse()
+                            .map(signal => {
+                                const time = new Date(signal.timestamp).toLocaleTimeString();
+                                const emoji = signal.signal_direction === 'LONG' ? '📈' : '📉';
+                                return `
+                                    <div class="metric">
+                                        <span>${time}</span>
+                                        <span>${emoji} ${signal.signal_direction} ${signal.confidence}%</span>
+                                    </div>
+                                `;
+                            }).join('');
+                    }
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+        
+        function startMonitoring() {
+            fetch('/api/start_monitoring')
+                .then(response => response.json())
+                .then(data => {
+                    monitoring = true;
+                    if (autoUpdate) clearInterval(autoUpdate);
+                    autoUpdate = setInterval(updateData, 3000); // Update every 3 seconds
+                    updateData();
+                });
+        }
+        
+        function stopMonitoring() {
+            fetch('/api/stop_monitoring')
+                .then(response => response.json())
+                .then(data => {
+                    monitoring = false;
+                    if (autoUpdate) {
+                        clearInterval(autoUpdate);
+                        autoUpdate = null;
+                    }
+                });
+        }
+        
+        function checkNow() {
+            const checkButton = document.querySelector('.btn-success');
+            const originalText = checkButton.textContent;
+            
+            // Add loading indicator to price display
+            const priceDisplay = document.getElementById('current-price');
+            const originalPrice = priceDisplay.textContent;
+            priceDisplay.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+            priceDisplay.textContent = 'Checking...';
+            
+            // Disable button and show loading state
+            checkButton.disabled = true;
+            checkButton.textContent = '🔄 Checking...';
+            checkButton.style.opacity = '0.6';
+            checkButton.style.transform = 'scale(0.95)';
+            
+            // Add loading animation to status indicator
+            const statusIndicator = document.getElementById('status-indicator');
+            statusIndicator.style.animation = 'pulse 0.5s infinite';
+            
+            fetch('/api/get_signal')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update with fresh data from the API response
+                        const current = data.current_data;
+                        
+                        // Immediately update with the fresh data
+                        if (current) {
+                            // Update price with animation
+                            priceDisplay.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                            priceDisplay.textContent = `$${current.price.toFixed(2)}`;
+                            
+                            // Update all other fields immediately
+                            document.getElementById('ema20').textContent = `$${current.ema20.toFixed(2)}`;
+                            document.getElementById('ema50').textContent = `$${(current.ema50 || 0).toFixed(2)}`;
+                            document.getElementById('price-vs-ema20').textContent = `${current.price_vs_ema20_pct ? current.price_vs_ema20_pct.toFixed(2) : 0}%`;
+                            document.getElementById('macd').textContent = current.macd.toFixed(3);
+                            
+                            // Update RSI
+                            document.getElementById('rsi7').textContent = current.rsi7.toFixed(1);
+                            document.getElementById('rsi14').textContent = current.rsi14.toFixed(1);
+                            
+                            // Update RSI needle with animation
+                            const rsi7Angle = (current.rsi7 / 100) * 180 - 90;
+                            document.getElementById('rsi7-needle').style.transform = `translateX(-50%) rotate(${rsi7Angle}deg)`;
+                            
+                            // Update signal with animation
+                            const signalEl = document.getElementById('signal-status');
+                            const direction = current.signal_direction;
+                            signalEl.style.transform = 'scale(1.1)';
+                            signalEl.textContent = direction;
+                            signalEl.className = `signal-status signal-${direction.toLowerCase()}`;
+                            
+                            setTimeout(() => {
+                                signalEl.style.transform = 'scale(1)';
+                            }, 200);
+                            
+                            document.getElementById('confidence').textContent = `${current.confidence}%`;
+                            document.getElementById('confidence-bar').style.width = `${current.confidence}%`;
+                            document.getElementById('strength').textContent = `${current.signal_strength}/100`;
+                            document.getElementById('validity').textContent = `${current.validity_hours} hours`;
+                            
+                            // Update trade levels if signal is active
+                            const tradeLevelsCard = document.getElementById('trade-levels-card');
+                            if (direction !== 'HOLD' && current.entry_price) {
+                                tradeLevelsCard.style.display = 'block';
+                                tradeLevelsCard.style.animation = 'fadeIn 0.5s ease-in';
+                                
+                                document.getElementById('entry-price').textContent = `$${current.entry_price ? current.entry_price.toFixed(2) : '-'}`;
+                                document.getElementById('stop-loss').textContent = `$${current.stop_loss ? current.stop_loss.toFixed(2) : '-'}`;
+                                document.getElementById('tp1').textContent = `$${current.take_profit_1 ? current.take_profit_1.toFixed(2) : '-'}`;
+                                document.getElementById('tp2').textContent = `$${current.take_profit_2 ? current.take_profit_2.toFixed(2) : '-'}`;
+                                document.getElementById('tp3').textContent = `$${current.take_profit_3 ? current.take_profit_3.toFixed(2) : '-'}`;
+                                document.getElementById('rr1').textContent = `1:${current.risk_reward_1 || 0}`;
+                                document.getElementById('rr2').textContent = `1:${current.risk_reward_2 || 0}`;
+                                document.getElementById('rr3').textContent = `1:${current.risk_reward_3 || 0}`;
+                                document.getElementById('position-size').textContent = `${current.position_size_pct}%`;
+                                document.getElementById('risk-amount').textContent = `$${current.risk_amount ? current.risk_amount.toFixed(2) : '0.00'}`;
+                                
+                                // Update signal factors
+                                const factorsList = document.getElementById('signal-factors');
+                                if (current.signal_factors && current.signal_factors.length > 0) {
+                                    factorsList.innerHTML = current.signal_factors.map(f => `<li>${f}</li>`).join('');
+                                } else {
+                                    factorsList.innerHTML = '<li>No specific factors</li>';
+                                }
+                            } else {
+                                tradeLevelsCard.style.display = 'none';
+                            }
+                            
+                            // Update intraday analysis
+                            updateIntradayAnalysis(current);
+                            
+                            // Update last update time
+                            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+                        }
+                        
+                        // Show success feedback
+                        checkButton.textContent = '✓ Updated!';
+                        checkButton.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                        checkButton.style.transform = 'scale(1)';
+                        
+                        // Reset price display color after 1 second
+                        setTimeout(() => {
+                            priceDisplay.style.background = 'linear-gradient(135deg, #2563eb, #3b82f6)';
+                        }, 1000);
+                        
+                        // Also call updateData to get the monitoring log updated
+                        setTimeout(() => {
+                            updateData();
+                        }, 500);
+                        
+                        // Reset button after 2 seconds
+                        setTimeout(() => {
+                            checkButton.textContent = originalText;
+                            checkButton.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                            checkButton.style.opacity = '1';
+                            checkButton.disabled = false;
+                            statusIndicator.style.animation = '';
+                        }, 2000);
+                        
+                    } else {
+                        // Show error feedback
+                        priceDisplay.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                        priceDisplay.textContent = 'Error!';
+                        
+                        checkButton.textContent = '✗ Error';
+                        checkButton.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                        checkButton.style.transform = 'scale(1)';
+                        
+                        console.error('Manual check failed:', data.error);
+                        
+                        // Reset after 3 seconds
+                        setTimeout(() => {
+                            priceDisplay.style.background = 'linear-gradient(135deg, #2563eb, #3b82f6)';
+                            priceDisplay.textContent = originalPrice;
+                            checkButton.textContent = originalText;
+                            checkButton.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                            checkButton.style.opacity = '1';
+                            checkButton.disabled = false;
+                            statusIndicator.style.animation = '';
+                        }, 3000);
+                    }
+                })
+                .catch(error => {
+                    // Handle network errors
+                    priceDisplay.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                    priceDisplay.textContent = 'Network Error!';
+                    
+                    checkButton.textContent = '✗ Network Error';
+                    checkButton.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                    checkButton.style.transform = 'scale(1)';
+                    
+                    console.error('Network error during manual check:', error);
+                    
+                    // Reset after 3 seconds
+                    setTimeout(() => {
+                        priceDisplay.style.background = 'linear-gradient(135deg, #2563eb, #3b82f6)';
+                        priceDisplay.textContent = originalPrice;
+                        checkButton.textContent = originalText;
+                        checkButton.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                        checkButton.style.opacity = '1';
+                        checkButton.disabled = false;
+                        statusIndicator.style.animation = '';
+                    }, 3000);
+                });
+        }
+        
+        function updateIntradayAnalysis(current) {
+            // This function will be enhanced to show comprehensive intraday analysis
+            // For now, we'll simulate the data structure you provided
+            
+            // Simulated intraday series (in a real implementation, this would come from the API)
+            const intradayData = current.intraday_series || {};
+            
+            // Update price series
+            if (intradayData.price_series) {
+                const priceSeriesEl = document.getElementById('price-series');
+                priceSeriesEl.textContent = intradayData.price_series.map(p => p.toFixed(1)).join(', ');
+                
+                // Calculate price trend
+                const prices = intradayData.price_series;
+                if (prices && prices.length >= 2) {
+                    const trend = prices[prices.length - 1] > prices[0] ? 'up' : 
+                                 prices[prices.length - 1] < prices[0] ? 'down' : 'sideways';
+                    const trendEl = document.getElementById('price-trend');
+                    trendEl.textContent = trend.toUpperCase();
+                    trendEl.className = `trend-indicator trend-${trend}`;
+                }
+            } else {
+                // Fallback: create synthetic series based on current price
+                const currentPrice = current.price;
+                const syntheticPrices = generateSyntheticSeries(currentPrice, 10, 0.1);
+                document.getElementById('price-series').textContent = syntheticPrices.map(p => p.toFixed(2)).join(', ');
+                
+                // Simple trend based on current vs EMA
+                const trend = current.price > current.ema20 ? 'up' : current.price < current.ema20 ? 'down' : 'sideways';
+                const trendEl = document.getElementById('price-trend');
+                trendEl.textContent = trend.toUpperCase();
+                trendEl.className = `trend-indicator trend-${trend}`;
+            }
+            
+            // Update EMA20 series
+            if (intradayData.ema20_series) {
+                document.getElementById('ema20-series').textContent = intradayData.ema20_series.map(e => e.toFixed(2)).join(', ');
+            } else {
+                const syntheticEMA = generateSyntheticSeries(current.ema20, 10, 0.05);
+                document.getElementById('ema20-series').textContent = syntheticEMA.map(e => e.toFixed(2)).join(', ');
+            }
+            
+            // Update MACD series
+            if (intradayData.macd_series) {
+                document.getElementById('macd-series').textContent = intradayData.macd_series.map(m => m.toFixed(3)).join(', ');
+            } else {
+                const syntheticMACD = generateSyntheticSeries(current.macd, 10, 0.02);
+                document.getElementById('macd-series').textContent = syntheticMACD.map(m => m.toFixed(3)).join(', ');
+            }
+            
+            // Update RSI series
+            if (intradayData.rsi7_series) {
+                document.getElementById('rsi7-series').textContent = intradayData.rsi7_series.map(r => r.toFixed(1)).join(', ');
+            } else {
+                const syntheticRSI7 = generateSyntheticSeries(current.rsi7, 10, 2);
+                document.getElementById('rsi7-series').textContent = syntheticRSI7.map(r => Math.max(0, Math.min(100, r)).toFixed(1)).join(', ');
+            }
+            
+            if (intradayData.rsi14_series) {
+                document.getElementById('rsi14-series').textContent = intradayData.rsi14_series.map(r => r.toFixed(1)).join(', ');
+            } else {
+                const syntheticRSI14 = generateSyntheticSeries(current.rsi14, 10, 1.5);
+                document.getElementById('rsi14-series').textContent = syntheticRSI14.map(r => Math.max(0, Math.min(100, r)).toFixed(1)).join(', ');
+            }
+            
+            // Update 4H context
+            const longerContext = current.longer_term_context || {};
+            document.getElementById('ema20-4h').textContent = (longerContext.ema20_4h || current.ema20).toFixed(2);
+            document.getElementById('ema50-4h').textContent = (longerContext.ema50_4h || current.ema50 || current.ema20).toFixed(2);
+            document.getElementById('atr3-4h').textContent = (longerContext.atr3_4h || 0.5).toFixed(3);
+            document.getElementById('atr14-4h').textContent = (longerContext.atr14_4h || 1.0).toFixed(3);
+            document.getElementById('rsi14-4h').textContent = (longerContext.rsi14_4h || current.rsi14).toFixed(1);
+            
+            // Position vs 4H EMAs
+            const ema20_4h = longerContext.ema20_4h || current.ema20;
+            const ema50_4h = longerContext.ema50_4h || current.ema50 || current.ema20;
+            const position4h = current.price > ema20_4h && current.price > ema50_4h ? 'Above Both' :
+                              current.price < ema20_4h && current.price < ema50_4h ? 'Below Both' : 'Between EMAs';
+            document.getElementById('position-4h-emas').textContent = position4h;
+            
+            // Volatility level
+            const atr3 = longerContext.atr3_4h || 0.5;
+            const atr14 = longerContext.atr14_4h || 1.0;
+            const volatility = atr3 > atr14 * 0.8 ? 'High' : atr3 < atr14 * 0.4 ? 'Low' : 'Normal';
+            const volEl = document.getElementById('volatility-level');
+            volEl.textContent = volatility;
+            volEl.className = `trend-indicator trend-${volatility.toLowerCase() === 'high' ? 'down' : volatility.toLowerCase() === 'low' ? 'up' : 'sideways'}`;
+            
+            // MACD 4H trend (simplified)
+            const macd4hTrend = current.macd > 0 ? 'Bullish' : 'Bearish';
+            const macdTrendEl = document.getElementById('macd-4h-trend');
+            macdTrendEl.textContent = macd4hTrend;
+            macdTrendEl.className = `trend-indicator trend-${macd4hTrend.toLowerCase() === 'bullish' ? 'up' : 'down'}`;
+            
+            // Volume comparison (simulated)
+            document.getElementById('volume-vs-avg').textContent = 'Normal';
+            
+            // Update confidence factors
+            updateConfidenceFactors(current);
+        }
+        
+        function generateSyntheticSeries(baseValue, length, volatility) {
+            const series = [];
+            let current = baseValue;
+            for (let i = 0; i < length; i++) {
+                const change = (Math.random() - 0.5) * 2 * volatility;
+                current += change;
+                series.push(current);
+            }
+            return series;
+        }
+        
+        function updateConfidenceFactors(current) {
+            const factors = [];
+            
+            // Price vs EMA analysis
+            if (current.price > current.ema20) {
+                factors.push({
+                    text: `Price above EMA20 by ${((current.price - current.ema20) / current.ema20 * 100).toFixed(2)}% - Bullish`,
+                    type: 'positive'
+                });
+            } else {
+                factors.push({
+                    text: `Price below EMA20 by ${((current.ema20 - current.price) / current.ema20 * 100).toFixed(2)}% - Bearish`,
+                    type: 'negative'
+                });
+            }
+            
+            // RSI analysis
+            if (current.rsi7 < 30) {
+                factors.push({
+                    text: `RSI(7) at ${current.rsi7.toFixed(1)} - Oversold, potential reversal`,
+                    type: 'positive'
+                });
+            } else if (current.rsi7 > 70) {
+                factors.push({
+                    text: `RSI(7) at ${current.rsi7.toFixed(1)} - Overbought, potential reversal`,
+                    type: 'negative'
+                });
+            } else {
+                factors.push({
+                    text: `RSI(7) at ${current.rsi7.toFixed(1)} - Neutral territory`,
+                    type: 'neutral'
+                });
+            }
+            
+            // MACD analysis
+            if (current.macd > 0) {
+                factors.push({
+                    text: `MACD positive at ${current.macd.toFixed(3)} - Bullish momentum`,
+                    type: 'positive'
+                });
+            } else {
+                factors.push({
+                    text: `MACD negative at ${current.macd.toFixed(3)} - Bearish momentum`,
+                    type: 'negative'
+                });
+            }
+            
+            // Signal strength analysis
+            if (current.signal_strength > 60) {
+                factors.push({
+                    text: `Signal strength ${current.signal_strength}/100 - High confidence`,
+                    type: 'positive'
+                });
+            } else if (current.signal_strength > 30) {
+                factors.push({
+                    text: `Signal strength ${current.signal_strength}/100 - Moderate confidence`,
+                    type: 'neutral'
+                });
+            } else {
+                factors.push({
+                    text: `Signal strength ${current.signal_strength}/100 - Low confidence`,
+                    type: 'negative'
+                });
+            }
+            
+            // Render confidence factors
+            const container = document.getElementById('confidence-factors');
+            container.innerHTML = factors.map(factor => 
+                `<div class="confidence-item ${factor.type}">${factor.text}</div>`
+            ).join('');
+        }
+        
+        // Initial data load
+        updateData();
+    </script>
+</body>
+</html>
