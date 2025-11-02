@@ -1,0 +1,637 @@
+/* Trading Dashboard CSS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #0d1421;
+    color: #ffffff;
+    line-height: 1.6;
+}
+
+.dashboard-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header Styles */
+.dashboard-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header-content h1 {
+    font-size: 1.8rem;
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.header-stats {
+    display: flex;
+    gap: 2rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 0.2rem;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+/* Main Content */
+.dashboard-main {
+    flex: 1;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Card Styles */
+.card {
+    background: #1e293b;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    border: 1px solid #334155;
+}
+
+.card-header {
+    background: #334155;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #475569;
+}
+
+.card-header h2 {
+    color: #10b981;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Portfolio Overview */
+.portfolio-overview {
+    margin-bottom: 2rem;
+}
+
+.portfolio-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+
+.portfolio-stat {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #0f172a;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.stat-icon {
+    background: #10b981;
+    color: white;
+    padding: 0.8rem;
+    border-radius: 50%;
+    font-size: 1.2rem;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-title {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    margin-bottom: 0.3rem;
+}
+
+.stat-amount {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.2rem;
+}
+
+.stat-change {
+    font-size: 0.9rem;
+}
+
+.stat-change.positive {
+    color: #10b981;
+}
+
+.stat-change.negative {
+    color: #ef4444;
+}
+
+/* Time Selector */
+.time-selector {
+    display: flex;
+    background: #0f172a;
+    border-radius: 6px;
+    padding: 0.2rem;
+    gap: 0.2rem;
+}
+
+.time-btn {
+    background: transparent;
+    color: #94a3b8;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.time-btn:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.time-btn.active {
+    background: #10b981;
+    color: #ffffff;
+}
+
+/* Chart Section */
+.chart-section {
+    margin-bottom: 2rem;
+}
+
+.chart-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.chart-btn {
+    background: #0f172a;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.chart-btn:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.chart-btn.active {
+    background: #10b981;
+    color: #ffffff;
+    border-color: #10b981;
+}
+
+.chart-container {
+    padding: 1.5rem;
+    height: 400px;
+    position: relative;
+}
+
+#portfolioChart {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Trading Grid */
+.trading-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Tables */
+.positions-table,
+.trades-table {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #0f172a;
+}
+
+th,
+td {
+    padding: 0.8rem;
+    text-align: left;
+    border-bottom: 1px solid #334155;
+}
+
+th {
+    font-weight: 600;
+    color: #10b981;
+    font-size: 0.9rem;
+}
+
+td {
+    color: #e2e8f0;
+    font-size: 0.85rem;
+}
+
+.no-data {
+    text-align: center;
+    color: #64748b;
+    font-style: italic;
+}
+
+.position-count {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.export-btn {
+    background: #0f172a;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+}
+
+.export-btn:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+/* Market Analysis */
+.market-analysis {
+    margin-bottom: 2rem;
+}
+
+.analysis-content {
+    padding: 1.5rem;
+}
+
+.analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.analysis-item {
+    background: #0f172a;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.analysis-item h3 {
+    color: #10b981;
+    font-size: 1rem;
+    margin-bottom: 0.8rem;
+}
+
+.signal-display {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.signal-type {
+    background: #ef4444;
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.signal-type.LONG {
+    background: #10b981;
+}
+
+.signal-type.SHORT {
+    background: #ef4444;
+}
+
+.signal-type.FLAT {
+    background: #64748b;
+}
+
+.signal-confidence {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.trend-display,
+.indicators-display,
+.levels-display {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.trend-item,
+.indicator-item,
+.level-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0;
+}
+
+.trend-value {
+    font-weight: 600;
+}
+
+.trend-value.bullish {
+    color: #10b981;
+}
+
+.trend-value.bearish {
+    color: #ef4444;
+}
+
+.trend-value.neutral {
+    color: #94a3b8;
+}
+
+.analysis-time {
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+.rationale-section {
+    background: #0f172a;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.rationale-section h4 {
+    color: #10b981;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+#trading-rationale {
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Controls Panel */
+.controls-panel {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    display: flex;
+    gap: 1rem;
+    z-index: 50;
+}
+
+.control-btn {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.control-btn:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.control-btn.stop {
+    background: #ef4444;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    display: none;
+}
+
+.control-btn.stop:hover {
+    background: #dc2626;
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+.control-btn:disabled {
+    background: #64748b;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Status Indicator */
+.status-indicator {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    background: #1e293b;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    z-index: 50;
+}
+
+.status-indicator.connected {
+    border-color: #10b981;
+}
+
+.status-indicator.connected i {
+    color: #10b981;
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.disconnected i {
+    color: #ef4444;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* P&L Colors */
+.pnl-positive {
+    color: #10b981 !important;
+}
+
+.pnl-negative {
+    color: #ef4444 !important;
+}
+
+.pnl-neutral {
+    color: #94a3b8 !important;
+}
+
+/* Action Buttons */
+.action-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: #dc2626;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .trading-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .controls-panel {
+        position: relative;
+        bottom: auto;
+        right: auto;
+        justify-content: center;
+        margin: 2rem 0;
+    }
+    
+    .status-indicator {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        margin: 1rem auto;
+        width: fit-content;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-main {
+        padding: 1rem;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .header-stats {
+        gap: 1rem;
+    }
+    
+    .portfolio-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .analysis-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .controls-panel {
+        flex-wrap: wrap;
+    }
+    
+    .chart-container {
+        height: 300px;
+    }
+    
+    table {
+        font-size: 0.8rem;
+    }
+    
+    th, td {
+        padding: 0.5rem 0.3rem;
+    }
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #334155;
+    border-top: 2px solid #10b981;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Hidden State */
+.hidden {
+    display: none !important;
+}
+
+/* Show State Override */
+.show {
+    display: block !important;
+}
