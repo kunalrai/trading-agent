@@ -4,7 +4,6 @@ Exchange Factory for creating exchange instances
 import os
 from typing import Optional
 from .base_exchange import BaseExchange
-from .binance_exchange import BinanceExchange
 from .coindcx_exchange import CoinDCXExchange
 
 
@@ -12,8 +11,8 @@ class ExchangeFactory:
     """Factory class for creating exchange instances"""
     
     SUPPORTED_EXCHANGES = {
-        'binance': BinanceExchange,
-        'coindcx': CoinDCXExchange,
+       
+        'coindcx': CoinDCXExchange
     }
     
     @classmethod

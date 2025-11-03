@@ -1,163 +1,2767 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>SOL/USDT Trading Monitor</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoinDCX Market Scanner Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #ffffff; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header { text-align: center; padding: 20px; background: #2d2d2d; border-radius: 10px; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: #2d2d2d; padding: 20px; border-radius: 10px; }
-        .metric { display: flex; justify-content: space-between; margin: 10px 0; }
-        .signal-long { background: #4ade80; color: black; }
-        .signal-short { background: #f87171; color: black; }
-        .signal-hold { background: #6b7280; }
-        .price { font-size: 24px; font-weight: bold; }
-        .status { padding: 10px; border-radius: 5px; text-align: center; margin: 10px 0; }
-        .button { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
-        .button:hover { background: #2563eb; }
-        #last-update { color: #9ca3af; font-size: 12px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .navbar h1 {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .container {
+            
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .scan-controls {
+            margin-bottom: 30px;
+        }
+
+        .scan-controls h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .control-group select,
+        .control-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.4);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+        }
+
+        .scan-status {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #6c757d;
+        }
+
+        .status-indicator.scanning {
+            background: #ffc107;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.ready {
+            background: #28a745;
+        }
+
+        .status-indicator.error {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #007bff;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Symbol link styling */
+        td a {
+            color: #007bff !important;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        
+        td a:hover {
+            color: #0056b3 !important;
+            text-decoration: underline;
+            transform: translateX(2px);
+        }
+        
+        td a:visited {
+            color: #6f42c1 !important;
+        }
+
+        .signal-long {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .signal-short {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .signal-flat {
+            color: #6c757d;
+        }
+
+        .confidence-excellent {
+            background: linear-gradient(90deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .confidence-high {
+            background: linear-gradient(90deg, #ffd93d, #ff8c42);
+            color: #333;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .confidence-medium {
+            background: linear-gradient(90deg, #a8e6cf, #52c234);
+            color: #333;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .confidence-low {
+            background: #e9ecef;
+            color: #6c757d;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .error-row {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #6c757d;
+        }
+
+        .last-scan {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn-trade {
+            padding: 4px 8px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            min-width: 60px;
+        }
+
+        .btn-trade-long {
+            background: linear-gradient(90deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-trade-long:hover {
+            background: linear-gradient(90deg, #218838, #1ea97e);
+            transform: scale(1.05);
+        }
+
+        .btn-trade-short {
+            background: linear-gradient(90deg, #dc3545, #fd7e14);
+            color: white;
+        }
+
+        .btn-trade-short:hover {
+            background: linear-gradient(90deg, #c82333, #e8650d);
+            transform: scale(1.05);
+        }
+
+        /* Low confidence trade buttons - more subdued colors */
+        .btn-trade-long.low-confidence {
+            background: linear-gradient(90deg, #6c757d, #495057);
+            opacity: 0.8;
+            border: 1px dashed #28a745;
+        }
+
+        .btn-trade-long.low-confidence:hover {
+            background: linear-gradient(90deg, #28a745, #20c997);
+            opacity: 1;
+            transform: scale(1.02);
+        }
+
+        .btn-trade-short.low-confidence {
+            background: linear-gradient(90deg, #6c757d, #495057);
+            opacity: 0.8;
+            border: 1px dashed #dc3545;
+        }
+
+        .btn-trade-short.low-confidence:hover {
+            background: linear-gradient(90deg, #dc3545, #fd7e14);
+            opacity: 1;
+            transform: scale(1.02);
+        }
+
+        /* Manual trade needed buttons */
+        .btn-trade.manual-trade-needed {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+            color: #212529;
+            border: 1px dashed #ff6b6b;
+        }
+
+        .btn-trade.manual-trade-needed:hover {
+            background: linear-gradient(90deg, #e0a800, #e8650d);
+            transform: scale(1.05);
+        }
+
+        /* Neutral analyze button */
+        .btn-trade.btn-neutral {
+            background: linear-gradient(90deg, #6c757d, #495057);
+            color: white;
+        }
+
+        .btn-trade.btn-neutral:hover {
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            transform: scale(1.05);
+        }
+
+        .no-trade {
+            color: #6c757d;
+            font-style: italic;
+            font-size: 12px;
+            cursor: help;
+        }
+
+        .trading-controls {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .trading-controls h4 {
+            color: #495057;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .manual-trading {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .manual-trading h4 {
+            color: #495057;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: #dc3545;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Main positions section styles */
+        .main-positions-section {
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .positions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .positions-header h3 {
+            color: #495057;
+            margin: 0;
+        }
+
+        .positions-header .btn {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        .positions-list {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .positions-header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .positions-header .btn {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+        }
     </style>
 </head>
 <body>
+    <nav class="navbar">
+        <h1><i class="fas fa-chart-line"></i> CoinDCX Market Scanner Dashboard</h1>
+    </nav>
+
     <div class="container">
-        <div class="header">
-            <h1>🔍 SOL/USDT Trading Monitor</h1>
-            <div id="last-update">Last Update: Never</div>
-            <button class="button" onclick="toggleMonitoring()">Start Monitoring</button>
+        <div class="dashboard-grid">
+            <div class="main-content">
+                <div style="padding: 20px;">
+                    <!-- Active Positions Section -->
+                    <div class="main-positions-section">
+                        <div class="positions-header">
+                            <h3><i class="fas fa-chart-pie"></i> Active Positions <small style="color: #6c757d; font-weight: normal;">(Auto-refresh: 3min)</small></h3>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="refresh-positions-btn" class="btn">
+                                    <i class="fas fa-refresh"></i> Refresh Positions
+                                </button>
+                                <button id="exit-all-positions-btn" class="btn" style="background: #dc3545; color: white;" onclick="exitAllPositions()">
+                                    <i class="fas fa-sign-out-alt"></i> Exit All Positions
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="positions-container">
+                            <div id="positions-status" class="scan-status">
+                                <div class="status-header">
+                                    <div class="status-indicator ready"></div>
+                                    <strong>No positions loaded</strong>
+                                </div>
+                                <small>Click Refresh to load your active positions</small>
+                            </div>
+
+                            <div id="positions-list" class="positions-list">
+                                <!-- Positions will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Futures Wallet Section -->
+                    <div class="main-positions-section">
+                        <div class="positions-header">
+                            <h3><i class="fas fa-wallet"></i> Futures Wallet <small style="color: #6c757d; font-weight: normal;">(Auto-refresh: 3min)</small></h3>
+                            <button id="refresh-wallet-btn" class="btn">
+                                <i class="fas fa-refresh"></i> Refresh Wallet
+                            </button>
+                        </div>
+
+                        <div id="wallet-container">
+                            <div id="wallet-status" class="scan-status">
+                                <div class="status-header">
+                                    <div class="status-indicator ready"></div>
+                                    <strong>No wallet data loaded</strong>
+                                </div>
+                                <small>Click Refresh to load your wallet balance</small>
+                            </div>
+
+                            <div id="wallet-list" class="positions-list">
+                                <!-- Wallet will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Wallet History Section -->
+                    <div class="main-positions-section">
+                        <div class="positions-header">
+                            <h3><i class="fas fa-chart-line"></i> Wallet Balance History</h3>
+                            <div>
+                                <select id="history-currency-filter" style="margin-right: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                                    <option value="">All Currencies</option>
+                                    <option value="USDT">USDT</option>
+                                    <option value="BTC">BTC</option>
+                                    <option value="ETH">ETH</option>
+                                </select>
+                                <select id="history-timeframe" style="margin-right: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                                    <option value="7">Last 7 Days</option>
+                                    <option value="14">Last 14 Days</option>
+                                    <option value="30" selected>Last 30 Days</option>
+                                    <option value="90">Last 90 Days</option>
+                                </select>
+                                <button id="load-history-btn" class="btn">
+                                    <i class="fas fa-history"></i> Load History
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="wallet-history-container">
+                            <div id="wallet-history-status" class="scan-status">
+                                <div class="status-header">
+                                    <div class="status-indicator ready"></div>
+                                    <strong>No history loaded</strong>
+                                </div>
+                                <small>Select timeframe and click Load History to view daily wallet balance changes over time</small>
+                            </div>
+
+                            <div id="wallet-history-list" class="positions-list" style="display: none;">
+                                <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px;">
+                                    <canvas id="walletHistoryChart" width="400" height="200"></canvas>
+                                </div>
+                                <div id="wallet-history-summary" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px; font-size: 12px;">
+                                    <!-- Summary will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 style="color: #495057; margin-bottom: 20px;">
+                        <i class="fas fa-table"></i> Market Analysis Results 
+                        <span id="results-counter" style="font-size: 14px; color: #6c757d; font-weight: normal;"></span>
+                    </h2>
+
+                    <div id="stats-container" style="display: none;">
+                        <div class="stats-grid" id="stats-grid">
+                            <!-- Stats will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Signal</th>
+                                    <th>Combined Confidence</th>
+                                    <th>Short-term (5m)</th>
+                                    <th>Long-term (4h)</th>
+                                    <th>Entry</th>
+                                    <th>TP</th>
+                                    <th>SL</th>
+                                    <th>Current Price</th>
+                                    <th>Volume Ratio</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-body">
+                                <tr>
+                                    <td colspan="8" class="no-data">
+                                        <i class="fas fa-search"></i><br>
+                                        No scan results yet. Start a scan to see market analysis.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="last-scan-info" class="last-scan" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="scan-controls">
+                    <h3><i class="fas fa-play-circle"></i> Scan Controls</h3>
+
+                    <div id="scan-status" class="scan-status">
+                        <div class="status-header">
+                            <div id="status-indicator" class="status-indicator ready"></div>
+                            <strong id="status-text">Ready</strong>
+                        </div>
+                        <div id="status-message">System ready for market scanning</div>
+                        <div id="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="progress-fill" class="progress-fill"></div>
+                            </div>
+                            <small id="current-symbol"></small>
+                        </div>
+                    </div>
+
+                    <form id="scan-form">
+                        <div class="control-group">
+                            <label for="scan-type">Scan Type:</label>
+                            <select id="scan-type" name="scan_type">
+                                <option value="quick">Quick Scan (15 symbols)</option>
+                                <option value="medium">Medium Scan (30 symbols)</option>
+                                <option value="full">Full Scan (All symbols)</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
+                            <label for="min-volume">Min Volume ($):</label>
+                            <input type="number" id="min-volume" name="min_volume" value="50000" min="10000" step="10000">
+                        </div>
+
+                        <button type="submit" id="scan-btn" class="btn">
+                            <i class="fas fa-search"></i> Start Market Scan
+                        </button>
+                        <button type="button" id="stop-scan-btn" class="btn btn-warning" style="display: none; margin-top: 10px;">
+                            <i class="fas fa-stop"></i> Stop Scanning
+                        </button>
+                    </form>
+
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #dee2e6;">
+
+                    <div class="trading-controls">
+                        <h4><i class="fas fa-bolt"></i> Auto Trading</h4>
+                        
+                        <div class="control-group">
+                            <label for="position-size">Position Size (USD):</label>
+                            <input type="number" id="position-size" value="300" min="10" max="10000" step="10">
+                            <small class="text-muted">💡 Default quantity configured in .env: COINDCX_DEFAULT_QUANTITY</small>
+                        </div>
+
+                        <div class="control-group">
+                            <label for="min-confidence-trade">Min Confidence for Trading:</label>
+                            <input type="number" id="min-confidence-trade" value="80" min="60" max="95" step="5">
+                        </div>
+
+                        <button id="enable-trading-btn" class="btn btn-success">
+                            <i class="fas fa-robot"></i> Enable Auto Trading
+                        </button>
+
+                        <div id="trading-status" class="scan-status" style="margin-top: 15px; display: none;">
+                            <div class="status-header">
+                                <div class="status-indicator ready"></div>
+                                <strong>Auto Trading: Disabled</strong>
+                            </div>
+                            <small>Configure settings and enable to start auto trading</small>
+                        </div>
+                    </div>
+
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #dee2e6;">
+
+                    <div class="manual-trading">
+                        <h4><i class="fas fa-hand-paper"></i> Manual Trade</h4>
+                        
+                        <button id="manual-trade-btn" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Open Trade Form
+                        </button>
+
+                        <button id="test-api-btn" class="btn btn-secondary" style="margin-top: 10px;">
+                            <i class="fas fa-plug"></i> Test API Connection
+                        </button>
+                    </div>
+
+
+                </div>
+            </div>
         </div>
-        
-        <div class="grid">
-            <div class="card">
-                <h3>📊 Current Price</h3>
-                <div class="price" id="current-price">$0.00</div>
-                <div class="metric">
-                    <span>EMA20:</span>
-                    <span id="ema20">$0.00</span>
-                </div>
-                <div class="metric">
-                    <span>MACD:</span>
-                    <span id="macd">0.000</span>
-                </div>
+    </div>
+
+    <!-- Manual Trade Modal -->
+    <div id="manual-trade-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-hand-paper"></i> Manual Trade Order</h3>
+                <button class="modal-close" id="close-modal">&times;</button>
             </div>
             
-            <div class="card">
-                <h3>📈 RSI Indicators</h3>
-                <div class="metric">
-                    <span>RSI(7):</span>
-                    <span id="rsi7">0.0</span>
-                </div>
-                <div class="metric">
-                    <span>RSI(14):</span>
-                    <span id="rsi14">0.0</span>
-                </div>
+            <div class="modal-body">
+                <form id="manual-trade-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="manual-symbol">Symbol:</label>
+                            <input type="text" id="manual-symbol" placeholder="BTC/USDT" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="manual-signal">Direction:</label>
+                            <select id="manual-signal" required>
+                                <option value="">Select Direction</option>
+                                <option value="LONG">📈 LONG (Buy)</option>
+                                <option value="SHORT">📉 SHORT (Sell)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="manual-entry">Entry Price:</label>
+                            <input type="number" id="manual-entry" step="0.0001" placeholder="0.0000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="manual-position-size">Position Size (USD):</label>
+                            <input type="number" id="manual-position-size" value="100" min="10" step="10" required>
+                            <small class="text-muted">💡 Leave as 0 to use default quantity from .env</small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="manual-tp">Take Profit:</label>
+                            <input type="number" id="manual-tp" step="0.0001" placeholder="0.0000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="manual-sl">Stop Loss:</label>
+                            <input type="number" id="manual-sl" step="0.0001" placeholder="0.0000" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="manual-leverage">Leverage:</label>
+                            <select id="manual-leverage">
+                                <option value="1">1x</option>
+                                <option value="2" selected>2x</option>
+                                <option value="5">5x</option>
+                                <option value="10">10x</option>
+                                <option value="20">20x</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="manual-order-type">Order Type:</label>
+                            <select id="manual-order-type">
+                                <option value="market_order" selected>Market Order</option>
+                                <option value="limit_order">Limit Order</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancel-trade">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-rocket"></i> Create Order
+                        </button>
+                    </div>
+                </form>
             </div>
-            
-            <div class="card">
-                <h3>🎯 Trading Signal</h3>
-                <div class="status" id="signal-status">HOLD</div>
-                <div class="metric">
-                    <span>Confidence:</span>
-                    <span id="confidence">0%</span>
-                </div>
-                <div class="metric">
-                    <span>Strength:</span>
-                    <span id="strength">0/100</span>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h3>💰 Trade Levels</h3>
-                <div class="metric">
-                    <span>Entry:</span>
-                    <span id="entry">-</span>
-                </div>
-                <div class="metric">
-                    <span>Stop Loss:</span>
-                    <span id="stop-loss">-</span>
-                </div>
-                <div class="metric">
-                    <span>Take Profit 1:</span>
-                    <span id="tp1">-</span>
-                </div>
-                <div class="metric">
-                    <span>Take Profit 2:</span>
-                    <span id="tp2">-</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card" style="margin-top: 20px;">
-            <h3>📝 Signal Factors</h3>
-            <div id="signal-factors">No active signal factors</div>
         </div>
     </div>
 
     <script>
-        let monitoring = false;
-        
-        function updateData() {
-            fetch('/api/data')
-                .then(response => response.json())
-                .then(data => {
-                    const current = data.current_data;
-                    if (current && Object.keys(current).length > 0) {
-                        document.getElementById('current-price').textContent = `$${current.price}`;
-                        document.getElementById('ema20').textContent = `$${current.ema20}`;
-                        document.getElementById('macd').textContent = current.macd.toFixed(3);
-                        document.getElementById('rsi7').textContent = current.rsi7.toFixed(1);
-                        document.getElementById('rsi14').textContent = current.rsi14.toFixed(1);
-                        document.getElementById('confidence').textContent = `${current.confidence}%`;
-                        document.getElementById('strength').textContent = `${current.signal_strength}/100`;
+        let statusCheckInterval;
+        let positionsRefreshInterval;
+        let walletRefreshInterval;
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadResults();
+            startStatusChecking();
+            startAutoRefresh();
+            //startAutoScan();
+
+            // Handle scan form submission
+            document.getElementById('scan-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                startScan(true); // Manual scan
+            });
+
+            // Handle stop scan button
+            document.getElementById('stop-scan-btn').addEventListener('click', stopScan);
+
+            // Handle trading controls
+            document.getElementById('enable-trading-btn').addEventListener('click', toggleAutoTrading);
+
+            // Handle manual trade modal
+            document.getElementById('manual-trade-btn').addEventListener('click', openManualTradeModal);
+            document.getElementById('close-modal').addEventListener('click', closeManualTradeModal);
+            document.getElementById('cancel-trade').addEventListener('click', closeManualTradeModal);
+            document.getElementById('manual-trade-form').addEventListener('submit', submitManualTrade);
+
+            // Handle API test
+            document.getElementById('test-api-btn').addEventListener('click', testApiConnection);
+
+            // Handle positions
+            document.getElementById('refresh-positions-btn').addEventListener('click', refreshPositions);
+
+            // Handle wallet
+            document.getElementById('refresh-wallet-btn').addEventListener('click', refreshWallet);
+
+            // Handle wallet history
+            document.getElementById('load-history-btn').addEventListener('click', loadWalletHistory);
+
+            // Close modal when clicking outside
+            document.getElementById('manual-trade-modal').addEventListener('click', function(e) {
+                if (e.target.id === 'manual-trade-modal') {
+                    closeManualTradeModal();
+                }
+            });
+        });
+
+        function startScan(isManual = false) {
+            const formData = new FormData(document.getElementById('scan-form'));
+            const scanBtn = document.getElementById('scan-btn');
+            const stopBtn = document.getElementById('stop-scan-btn');
+
+            // Reset results counter and clear table for new scan
+            lastResultsCount = 0;
+            const resultsCounter = document.getElementById('results-counter');
+            resultsCounter.textContent = '';
+            
+            // Clear current results to show loading state
+            const tbody = document.getElementById('results-body');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="12" class="no-data">
+                        <div class="loading"></div><br>
+                        Starting scan... Results will appear here as they become available.
+                    </td>
+                </tr>
+            `;
+
+            // Only update button state for manual scans
+            if (isManual) {
+                scanBtn.disabled = true;
+                scanBtn.innerHTML = '<div class="loading"></div> Scanning...';
+                stopBtn.style.display = 'block'; // Show stop button
+            }
+
+            fetch('/scan', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    if (isManual) {
+                        alert('Error: ' + data.error);
+                        scanBtn.disabled = false;
+                        scanBtn.innerHTML = '<i class="fas fa-search"></i> Start Market Scan';
+                        stopBtn.style.display = 'none'; // Hide stop button on error
+                    }
+                } else {
+                    // Scan started successfully, status will be updated by the status checker
+                }
+            })
+            .catch(error => {
+                if (isManual) {
+                    alert('Error starting scan: ' + error);
+                    scanBtn.disabled = false;
+                    scanBtn.innerHTML = '<i class="fas fa-search"></i> Start Market Scan';
+                    stopBtn.style.display = 'none'; // Hide stop button on error
+                }
+            });
+        }
+
+        function stopScan() {
+            const stopBtn = document.getElementById('stop-scan-btn');
+            const originalText = stopBtn.innerHTML;
+
+            // Show confirmation dialog
+            if (!confirm('⚠️ Stop the current scan?\n\nThis will cancel the ongoing market analysis.')) {
+                return;
+            }
+
+            stopBtn.disabled = true;
+            stopBtn.innerHTML = '<div class="loading"></div> Stopping...';
+
+            fetch('/stop_scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Scan stopped successfully!');
+                    // Status will be updated by the status checker
+                } else {
+                    alert('❌ Error stopping scan: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error stopping scan:', error);
+                alert('❌ Network error stopping scan: ' + error.message);
+            })
+            .finally(() => {
+                stopBtn.disabled = false;
+                stopBtn.innerHTML = originalText;
+            });
+        }
+
+        function loadResults() {
+            fetch('/results')
+            .then(response => response.json())
+            .then(data => {
+                updateResults(data.results);
+                updateStats(data.results);
+                updateLastScanTime(data.last_scan_time);
+            })
+            .catch(error => {
+                console.error('Error loading results:', error);
+            });
+        }
+
+        let lastResultsCount = 0; // Track number of results for new highlights
+
+        function loadLiveResults() {
+            fetch('/results/live')
+            .then(response => response.json())
+            .then(data => {
+                // Only update if we have results
+                if (data.results && data.results.length > 0) {
+                    const newResultsCount = data.results.length;
+                    const hasNewResults = newResultsCount > lastResultsCount;
+                    
+                    console.log(`📊 Live update: ${newResultsCount} results available (${data.progress}% complete)`);
+                    
+                    if (hasNewResults) {
+                        console.log(`✨ ${newResultsCount - lastResultsCount} new results added!`);
+                    }
+                    
+                    updateResults(data.results);
+                    updateStats(data.results);
+                    
+                    // Just highlight new results without any auto-scrolling
+                    if (hasNewResults && lastResultsCount > 0) {
+                        const tbody = document.getElementById('results-body');
+                        const newRows = tbody.querySelectorAll('tr:not(.scanning-indicator)');
                         
-                        // Update signal status
-                        const signalEl = document.getElementById('signal-status');
-                        signalEl.textContent = current.signal_direction;
-                        signalEl.className = 'status signal-' + current.signal_direction.toLowerCase();
-                        
-                        // Update trade levels
-                        document.getElementById('entry').textContent = current.entry_price ? `$${current.entry_price}` : '-';
-                        document.getElementById('stop-loss').textContent = current.stop_loss ? `$${current.stop_loss}` : '-';
-                        document.getElementById('tp1').textContent = current.take_profit_1 ? `$${current.take_profit_1}` : '-';
-                        document.getElementById('tp2').textContent = current.take_profit_2 ? `$${current.take_profit_2}` : '-';
-                        
-                        // Update signal factors
-                        const factorsEl = document.getElementById('signal-factors');
-                        if (current.signal_factors && current.signal_factors.length > 0) {
-                            factorsEl.innerHTML = current.signal_factors.map(f => `• ${f}`).join('<br>');
-                        } else {
-                            factorsEl.textContent = 'No active signal factors';
+                        if (newRows.length > lastResultsCount) {
+                            const newRowIndex = lastResultsCount;
+                            if (newRows[newRowIndex]) {
+                                // Only highlight new row - no scrolling
+                                newRows[newRowIndex].style.backgroundColor = '#e7f3ff';
+                                setTimeout(() => {
+                                    newRows[newRowIndex].style.backgroundColor = '';
+                                }, 2000);
+                            }
                         }
                     }
                     
-                    if (data.last_update) {
-                        const updateTime = new Date(data.last_update).toLocaleTimeString();
-                        document.getElementById('last-update').textContent = `Last Update: ${updateTime}`;
+                    lastResultsCount = newResultsCount;
+                    
+                    // Show progress info
+                    if (data.is_scanning && data.current_symbol) {
+                        console.log(`🔍 Currently analyzing: ${data.current_symbol}`);
                     }
-                })
-                .catch(error => console.error('Error fetching data:', error));
+                }
+                
+                // Update scan time when scan completes
+                if (!data.is_scanning && data.last_scan_time) {
+                    updateLastScanTime(data.last_scan_time);
+                    // Reset counter when scan completes
+                    lastResultsCount = 0;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading live results:', error);
+            });
         }
-        
-        function toggleMonitoring() {
-            const button = document.querySelector('.button');
-            
-            if (!monitoring) {
-                fetch('/api/start_monitoring')
-                    .then(() => {
-                        monitoring = true;
-                        button.textContent = 'Stop Monitoring';
-                        setInterval(updateData, 5000); // Update every 5 seconds
-                        updateData(); // Initial update
-                    });
+
+        function startAutoScan() {
+            // Auto-scan every 60 seconds (1 minute) using current form settings
+            setInterval(function() {
+                console.log('Auto-starting market scan...');
+                startScan(); // Auto scan (no button state changes)
+            }, 60000*3);
+        }
+
+        function updateResults(results) {
+            const tbody = document.getElementById('results-body');
+            const resultsCounter = document.getElementById('results-counter');
+
+            // Update results counter
+            if (scan_status && scan_status.is_scanning) {
+                resultsCounter.textContent = `(${results.length} analyzed so far...)`;
+            } else if (results.length > 0) {
+                resultsCounter.textContent = `(${results.length} symbols)`;
             } else {
-                fetch('/api/stop_monitoring')
-                    .then(() => {
-                        monitoring = false;
-                        button.textContent = 'Start Monitoring';
-                    });
+                resultsCounter.textContent = '';
             }
+
+            if (results.length === 0) {
+                // Check if scan is in progress
+                if (scan_status && scan_status.is_scanning) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="12" class="no-data">
+                                <div class="loading"></div><br>
+                                Scanning in progress... Results will appear here as coins are analyzed.
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="12" class="no-data">
+                                <i class="fas fa-search"></i><br>
+                                No scan results yet. Start a scan to see market analysis.
+                            </td>
+                        </tr>
+                    `;
+                }
+                return;
+            }
+
+            // Sort results by combined confidence (highest first)
+            results.sort((a, b) => {
+                if (a.error && !b.error) return 1;
+                if (!a.error && b.error) return -1;
+                if (a.error && b.error) return 0;
+                return (b.combined_confidence || 0) - (a.combined_confidence || 0);
+            });
+
+            let html = '';
+            results.forEach(result => {
+                if (result.error) {
+                    html += `
+                        <tr class="error-row">
+                            <td>${result.symbol}</td>
+                            <td colspan="11">❌ Error: ${result.error}</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                const symbol = result.symbol;
+                const signal = result.signal || 'FLAT';
+                const combinedConfidence = result.combined_confidence || 0;
+                const shortConfidence = result.short_term_confidence || 0;
+                const longConfidence = result.long_term_confidence || 0;
+                const currentPrice = result.current_price || 0;
+                const volumeRatio = result.volume_ratio || 1;
+                const tradeLevels = result.trade_levels || {};
+                const entryPrice = tradeLevels.entry_price || currentPrice;
+                const takeProfit = tradeLevels.take_profit || 0;
+                const stopLoss = tradeLevels.stop_loss || 0;
+
+                // Signal class
+                const signalClass = signal === 'LONG' ? "signal-long" : signal === 'SHORT' ? "signal-short" : "signal-flat";
+
+                // Confidence class and status text
+                let confClass = "confidence-low";
+                let statusText = "😴 VERY LOW";
+                if (combinedConfidence >= 90) {
+                    confClass = "confidence-excellent";
+                    statusText = "🔥 EXCELLENT";
+                } else if (combinedConfidence >= 80) {
+                    confClass = "confidence-high";
+                    statusText = "⚡ VERY HIGH";
+                } else if (combinedConfidence >= 70) {
+                    confClass = "confidence-medium";
+                    statusText = "💪 HIGH";
+                } else if (combinedConfidence >= 60) {
+                    statusText = "👍 MODERATE";
+                } else if (combinedConfidence >= 50) {
+                    statusText = "🤔 LOW";
+                }
+
+                // Build table row
+                // Convert symbol to CoinDCX futures URL format (e.g., BTC/USDT -> B-BTC_USDT)
+                const coindcxSymbol = symbol.includes('/') ? 
+                    'B-' + symbol.replace('/', '_') : symbol;
+                const coindcxUrl = `https://coindcx.com/futures/${coindcxSymbol}`;
+                
+                let rowHtml = '<tr>' +
+                    '<td><strong><a href="' + coindcxUrl + '" target="_blank" title="View ' + symbol + ' on CoinDCX Futures" style="color: #007bff; text-decoration: none;">' + symbol + ' <i class="fas fa-external-link-alt" style="font-size: 10px; opacity: 0.7;"></i></a></strong></td>' +
+                    '<td class="' + signalClass + '">' + signal + '</td>' +
+                    '<td><span class="' + confClass + '">' + combinedConfidence.toFixed(1) + '%</span></td>' +
+                    '<td>' + shortConfidence.toFixed(1) + '</td>' +
+                    '<td>' + longConfidence.toFixed(1) + '</td>' +
+                    '<td>$' + entryPrice.toFixed(4) + '</td>' +
+                    '<td>$' + takeProfit.toFixed(4) + '</td>' +
+                    '<td>$' + stopLoss.toFixed(4) + '</td>' +
+                    '<td>$' + currentPrice.toFixed(4) + '</td>' +
+                    '<td>' + volumeRatio.toFixed(2) + 'x</td>' +
+                    '<td>' + statusText + '</td>' +
+                    '<td>';
+
+                // Create action button for every row
+                if (signal !== 'FLAT' && (takeProfit > 0 && stopLoss > 0)) {
+                    // Full trading button with valid TP/SL
+                    const baseButtonClass = signal === 'LONG' ? 'btn-trade-long' : 'btn-trade-short';
+                    const lowConfidenceClass = combinedConfidence < 70 ? ' low-confidence' : '';
+                    const buttonClass = baseButtonClass + lowConfidenceClass;
+                    const buttonText = signal === 'LONG' ? '📈 BUY' : '📉 SELL';
+                    
+                    // Add confidence indicator to button for low confidence trades
+                    const confidenceWarning = combinedConfidence < 70 ? ' ⚠️' : '';
+                    const confidenceLevel = combinedConfidence >= 80 ? 'HIGH' : combinedConfidence >= 70 ? 'MEDIUM' : 'LOW';
+                    const buttonTitle = `${confidenceLevel} Confidence (${combinedConfidence.toFixed(1)}%) - Create ${signal} order`;
+                    
+                    rowHtml += '<button class="btn-trade ' + buttonClass + '" onclick="createOrder(\'' + 
+                               symbol + '\', \'' + signal + '\', ' + combinedConfidence + ', ' + 
+                               entryPrice + ', ' + takeProfit + ', ' + stopLoss + ')" title="' + 
+                               buttonTitle + '">' + buttonText + confidenceWarning + '</button>';
+                    
+                } else if (signal !== 'FLAT' && (takeProfit <= 0 || stopLoss <= 0)) {
+                    // Manual trade button for signals without TP/SL
+                    const baseButtonClass = signal === 'LONG' ? 'btn-trade-long' : 'btn-trade-short';
+                    const buttonText = signal === 'LONG' ? '📝 MANUAL' : '📝 MANUAL';
+                    const buttonTitle = `${signal} Signal - Open Manual Trade Form (No TP/SL calculated)`;
+                    
+                    rowHtml += '<button class="btn-trade ' + baseButtonClass + ' manual-trade-needed" onclick="openManualTradeForSymbol(\'' + 
+                               symbol + '\', \'' + signal + '\', ' + entryPrice + ')" title="' + 
+                               buttonTitle + '">' + buttonText + ' ⚠️</button>';
+                    
+                } else {
+                    // FLAT signal - show analysis button
+                    rowHtml += '<button class="btn-trade btn-neutral" onclick="showAnalysisDetails(\'' + 
+                               symbol + '\')" title="View detailed analysis for ' + symbol + '">📊 ANALYZE</button>';
+                }
+                
+                rowHtml += '</td></tr>';
+                html += rowHtml;
+            });
+
+            // Add scanning indicator if scan is in progress
+            if (scan_status && scan_status.is_scanning) {
+                html += `
+                    <tr class="scanning-indicator" style="background: linear-gradient(90deg, rgba(0,123,255,0.1) 0%, rgba(0,123,255,0.05) 100%); border: 1px dashed #007bff;">
+                        <td colspan="12" style="text-align: center; padding: 15px; color: #007bff;">
+                            <div class="loading" style="display: inline-block; margin-right: 10px;"></div>
+                            <strong>Scanning in progress...</strong> 
+                            <span style="font-size: 12px;">
+                                ${scan_status.current_symbol ? `Currently analyzing: ${scan_status.current_symbol}` : 'More results will appear here automatically'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            tbody.innerHTML = html;
+        }
+
+        function updateStats(results) {
+            const statsContainer = document.getElementById('stats-container');
+            const statsGrid = document.getElementById('stats-grid');
+
+            if (results.length === 0) {
+                statsContainer.style.display = 'none';
+                return;
+            }
+
+            statsContainer.style.display = 'block';
+
+            // Calculate stats
+            let totalLong = 0, totalShort = 0, totalFlat = 0, highConf = 0, errors = 0;
+
+            results.forEach(result => {
+                if (result.error) {
+                    errors++;
+                    return;
+                }
+
+                const signal = result.signal || 'FLAT';
+                const confidence = result.combined_confidence || 0;
+
+                if (signal === 'LONG') totalLong++;
+                else if (signal === 'SHORT') totalShort++;
+                else totalFlat++;
+
+                if (confidence >= 80) highConf++;
+            });
+
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${totalLong}</div>
+                    <div class="stat-label">📈 LONG Signals</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${totalShort}</div>
+                    <div class="stat-label">📉 SHORT Signals</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${totalFlat}</div>
+                    <div class="stat-label">⏸️ FLAT Signals</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${highConf}</div>
+                    <div class="stat-label">🎯 High Confidence (≥80%)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${errors}</div>
+                    <div class="stat-label">❌ Errors</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${results.length}</div>
+                    <div class="stat-label">📊 Total Analyzed</div>
+                </div>
+            `;
+        }
+
+        function updateLastScanTime(lastScanTime) {
+            const lastScanInfo = document.getElementById('last-scan-info');
+
+            if (lastScanTime) {
+                const date = new Date(lastScanTime);
+                lastScanInfo.textContent = `Last scan: ${date.toLocaleString()}`;
+                lastScanInfo.style.display = 'block';
+            } else {
+                lastScanInfo.style.display = 'none';
+            }
+        }
+
+        function startStatusChecking() {
+            statusCheckInterval = setInterval(checkScanStatus, 1000);
+        }
+
+        function startAutoRefresh() {
+            // Auto-refresh positions every 3 minutes (180000 ms)
+            positionsRefreshInterval = setInterval(function() {
+                console.log('🔄 Auto-refreshing positions...');
+                refreshPositions(true); // Pass true for auto-refresh
+            }, 180000);
+
+            // Auto-refresh wallet every 3 minutes (180000 ms)
+            walletRefreshInterval = setInterval(function() {
+                console.log('🔄 Auto-refreshing wallet...');
+                refreshWallet(true); // Pass true for auto-refresh
+            }, 180000);
+
+            // Initial load after 2 seconds to give the page time to load
+            setTimeout(function() {
+                console.log('📊 Initial positions and wallet load...');
+                refreshPositions(false); // Initial load is manual
+                refreshWallet(false); // Initial load is manual
+            }, 2000);
+        }
+
+        function checkScanStatus() {
+            fetch('/scan_status')
+            .then(response => response.json())
+            .then(status => {
+                updateScanStatus(status);
+                
+                // If scanning, also fetch live results for real-time updates
+                if (status.is_scanning) {
+                    loadLiveResults();
+                }
+            })
+            .catch(error => {
+                console.error('Error checking scan status:', error);
+            });
+        }
+
+        // Global scan status tracking
+        let scan_status = null;
+
+        function updateScanStatus(status) {
+            // Store status globally for other functions
+            scan_status = status;
+            
+            const indicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            const statusMessage = document.getElementById('status-message');
+            const progressContainer = document.getElementById('progress-container');
+            const progressFill = document.getElementById('progress-fill');
+            const currentSymbol = document.getElementById('current-symbol');
+            const scanBtn = document.getElementById('scan-btn');
+            const stopBtn = document.getElementById('stop-scan-btn');
+
+            // Update status indicator
+            indicator.className = 'status-indicator';
+            if (status.is_scanning) {
+                indicator.classList.add('scanning');
+                statusText.textContent = 'Scanning';
+            } else {
+                indicator.classList.add('ready');
+                statusText.textContent = 'Ready';
+            }
+
+            // Update status message with live results count
+            if (status.is_scanning) {
+                statusMessage.textContent = status.message;
+            } else {
+                statusMessage.textContent = status.message;
+            }
+
+            // Update progress
+            if (status.is_scanning && status.progress !== undefined) {
+                progressContainer.style.display = 'block';
+                progressFill.style.width = status.progress + '%';
+                if (status.current_symbol) {
+                    currentSymbol.textContent = `Analyzing: ${status.current_symbol}`;
+                }
+            } else {
+                progressContainer.style.display = 'none';
+            }
+
+            // Update scan and stop buttons
+            if (status.is_scanning) {
+                scanBtn.disabled = true;
+                scanBtn.innerHTML = '<div class="loading"></div> Scanning...';
+                stopBtn.style.display = 'block'; // Show stop button when scanning
+            } else {
+                scanBtn.disabled = false;
+                scanBtn.innerHTML = '<i class="fas fa-search"></i> Start Market Scan';
+                stopBtn.style.display = 'none'; // Hide stop button when not scanning
+
+                // Final reload when scan completes (to ensure we have everything)
+                if (status.progress === 100) {
+                    setTimeout(() => {
+                        console.log('🏁 Scan completed - doing final results refresh');
+                        loadResults();
+                    }, 500);
+                }
+            }
+        }
+
+        // Trading functions
+        function createOrder(symbol, signal, confidence, entryPrice, takeProfit, stopLoss) {
+            // Validate TP/SL values before proceeding
+            console.log('Order Data Debug:', {
+                symbol, signal, confidence, entryPrice, takeProfit, stopLoss
+            });
+            
+            if (!takeProfit || takeProfit <= 0) {
+                alert('❌ Invalid Take Profit: ' + takeProfit + '\nTake Profit must be greater than 0');
+                return;
+            }
+            
+            if (!stopLoss || stopLoss <= 0) {
+                alert('❌ Invalid Stop Loss: ' + stopLoss + '\nStop Loss must be greater than 0');
+                return;
+            }
+            
+            // Validate price relationships
+            if (signal === 'LONG') {
+                if (takeProfit <= entryPrice) {
+                    alert('❌ LONG Trade Error:\nTake Profit (' + takeProfit + ') must be higher than Entry Price (' + entryPrice + ')');
+                    return;
+                }
+                if (stopLoss >= entryPrice) {
+                    alert('❌ LONG Trade Error:\nStop Loss (' + stopLoss + ') must be lower than Entry Price (' + entryPrice + ')');
+                    return;
+                }
+            } else if (signal === 'SHORT') {
+                if (takeProfit >= entryPrice) {
+                    alert('❌ SHORT Trade Error:\nTake Profit (' + takeProfit + ') must be lower than Entry Price (' + entryPrice + ')');
+                    return;
+                }
+                if (stopLoss <= entryPrice) {
+                    alert('❌ SHORT Trade Error:\nStop Loss (' + stopLoss + ') must be higher than Entry Price (' + entryPrice + ')');
+                    return;
+                }
+            }
+
+            // Create confirmation message with confidence warning if needed
+            let confirmMessage = 'Create ' + signal + ' order for ' + symbol + '?\n\n';
+            confirmMessage += 'Confidence: ' + confidence + '%\n';
+            confirmMessage += 'Entry: $' + entryPrice + '\n';
+            confirmMessage += 'TP: $' + takeProfit + '\n';
+            confirmMessage += 'SL: $' + stopLoss + '\n';
+            
+            // Add warning for low confidence trades
+            if (confidence < 70) {
+                confirmMessage += '\n⚠️  WARNING: LOW CONFIDENCE TRADE!\n';
+                confirmMessage += 'This trade has below 70% confidence.\n';
+                confirmMessage += 'Consider additional analysis before proceeding.\n';
+            } else if (confidence >= 80) {
+                confirmMessage += '\n✅ HIGH CONFIDENCE TRADE\n';
+            }
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            const positionSize = document.getElementById('position-size').value;
+            
+            const orderData = {
+                symbol: symbol,
+                signal: signal,
+                confidence: confidence,
+                entry_price: entryPrice,
+                take_profit: takeProfit,
+                stop_loss: stopLoss,
+                position_size: positionSize
+            };
+
+            fetch('/create_order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    // Log the full response for debugging
+                    return response.text().then(text => {
+                        console.error('Error response text:', text);
+                        throw new Error(`HTTP ${response.status}: ${text}`);
+                    });
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    alert('✅ Order created successfully!\n\nOrder ID: ' + (data.order_id || 'N/A'));
+                } else {
+                    alert('❌ Order creation failed:\n\n' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Full error details:', error);
+                alert('❌ Error creating order:\n\n' + error.message);
+            });
+        }
+
+        let autoTradingEnabled = false;
+        function toggleAutoTrading() {
+            const btn = document.getElementById('enable-trading-btn');
+            const status = document.getElementById('trading-status');
+            
+            autoTradingEnabled = !autoTradingEnabled;
+            
+            if (autoTradingEnabled) {
+                btn.innerHTML = '<i class="fas fa-stop"></i> Disable Auto Trading';
+                btn.className = 'btn btn-warning';
+                status.style.display = 'block';
+                status.querySelector('strong').textContent = 'Auto Trading: Enabled';
+                status.querySelector('small').textContent = 'Monitoring for high confidence signals...';
+                status.querySelector('.status-indicator').className = 'status-indicator scanning';
+            } else {
+                btn.innerHTML = '<i class="fas fa-robot"></i> Enable Auto Trading';
+                btn.className = 'btn btn-success';
+                status.querySelector('strong').textContent = 'Auto Trading: Disabled';
+                status.querySelector('small').textContent = 'Configure settings and enable to start auto trading';
+                status.querySelector('.status-indicator').className = 'status-indicator ready';
+            }
+        }
+
+        // Manual Trade Modal Functions
+        function openManualTradeModal() {
+            document.getElementById('manual-trade-modal').style.display = 'flex';
+            // Reset form
+            document.getElementById('manual-trade-form').reset();
+            document.getElementById('manual-position-size').value = document.getElementById('position-size').value;
+        }
+
+        function closeManualTradeModal() {
+            document.getElementById('manual-trade-modal').style.display = 'none';
+        }
+
+        function submitManualTrade(e) {
+            e.preventDefault();
+
+            const symbol = document.getElementById('manual-symbol').value.trim();
+            const signal = document.getElementById('manual-signal').value;
+            const entryPrice = parseFloat(document.getElementById('manual-entry').value);
+            const takeProfit = parseFloat(document.getElementById('manual-tp').value);
+            const stopLoss = parseFloat(document.getElementById('manual-sl').value);
+            const positionSize = parseFloat(document.getElementById('manual-position-size').value);
+            const leverage = parseInt(document.getElementById('manual-leverage').value);
+            const orderType = document.getElementById('manual-order-type').value;
+
+            // Validation
+            if (!symbol || !signal || !entryPrice || !takeProfit || !stopLoss || !positionSize) {
+                alert('❌ Please fill in all required fields');
+                return;
+            }
+
+            // Additional validation for LONG/SHORT logic
+            if (signal === 'LONG' && (takeProfit <= entryPrice || stopLoss >= entryPrice)) {
+                alert('❌ For LONG positions:\n• Take Profit must be above Entry Price\n• Stop Loss must be below Entry Price');
+                return;
+            }
+
+            if (signal === 'SHORT' && (takeProfit >= entryPrice || stopLoss <= entryPrice)) {
+                alert('❌ For SHORT positions:\n• Take Profit must be below Entry Price\n• Stop Loss must be above Entry Price');
+                return;
+            }
+
+            // Calculate risk/reward ratio
+            const riskAmount = Math.abs(entryPrice - stopLoss);
+            const rewardAmount = Math.abs(takeProfit - entryPrice);
+            const riskRewardRatio = rewardAmount / riskAmount;
+
+            // Confirmation dialog with details
+            const confirmMessage = `Create ${signal} order for ${symbol}?\n\n` +
+                                 `Entry: $${entryPrice.toFixed(4)}\n` +
+                                 `Take Profit: $${takeProfit.toFixed(4)}\n` +
+                                 `Stop Loss: $${stopLoss.toFixed(4)}\n` +
+                                 `Position Size: $${positionSize}\n` +
+                                 `Leverage: ${leverage}x\n` +
+                                 `Risk/Reward: 1:${riskRewardRatio.toFixed(2)}\n` +
+                                 `Order Type: ${orderType}`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            // Prepare order data
+            const orderData = {
+                symbol: symbol,
+                signal: signal,
+                entry_price: entryPrice,
+                take_profit: takeProfit,
+                stop_loss: stopLoss,
+                position_size: positionSize,
+                leverage: leverage,
+                order_type: orderType,
+                confidence: 100, // Manual trades are 100% confidence
+                manual_trade: true
+            };
+
+            // Submit order
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="loading"></div> Creating Order...';
+
+            fetch('/create_order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            })
+            .then(response => {
+                console.log('Manual Trade Response status:', response.status);
+                
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error('Manual Trade Error response:', text);
+                        throw new Error(`HTTP ${response.status}: ${text}`);
+                    });
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                console.log('Manual Trade Response data:', data);
+                if (data.success) {
+                    alert('✅ Manual order created successfully!\n\nOrder ID: ' + (data.order_id || 'N/A'));
+                    closeManualTradeModal();
+                } else {
+                    alert('❌ Order creation failed:\n\n' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Manual Trade Full error:', error);
+                alert('❌ Error creating order:\n\n' + error.message);
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            });
+        }
+
+        // API Testing Function
+        function testApiConnection() {
+            const testBtn = document.getElementById('test-api-btn');
+            const originalText = testBtn.innerHTML;
+            
+            testBtn.disabled = true;
+            testBtn.innerHTML = '<div class="loading"></div> Testing...';
+
+            fetch('/test_api', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ API Connection Successful!\n\nCoinDCX API is working properly.');
+                } else {
+                    alert('❌ API Connection Failed:\n\n' + (data.error || 'Unknown error') + 
+                          '\n\nPlease check your API credentials in the .env file.');
+                }
+            })
+            .catch(error => {
+                alert('❌ Error testing API:\n\n' + error);
+            })
+            .finally(() => {
+                testBtn.disabled = false;
+                testBtn.innerHTML = originalText;
+            });
+        }
+
+        // Function to open manual trade form for a specific symbol
+        function openManualTradeForSymbol(symbol, signal, entryPrice) {
+            // Open the manual trade modal
+            openManualTradeModal();
+            
+            // Pre-fill the form with the symbol data
+            document.getElementById('manual-symbol').value = symbol;
+            document.getElementById('manual-signal').value = signal;
+            document.getElementById('manual-entry').value = entryPrice;
+            
+            // Focus on the TP field since that's what needs to be filled
+            setTimeout(() => {
+                document.getElementById('manual-tp').focus();
+            }, 100);
+            
+            // Show helpful message
+            alert(`📝 Manual Trade Setup for ${symbol}\n\n` +
+                  `Signal: ${signal}\n` +
+                  `Entry Price: $${entryPrice}\n\n` +
+                  `Please set your Take Profit and Stop Loss levels.`);
+        }
+
+        // Function to show analysis details for a symbol
+        function showAnalysisDetails(symbol) {
+            // Find the result for this symbol
+            const tbody = document.getElementById('results-body');
+            const rows = tbody.querySelectorAll('tr');
+            
+            let analysisInfo = `📊 Analysis Details for ${symbol}\n\n`;
+            analysisInfo += `Signal: FLAT (No clear direction)\n`;
+            analysisInfo += `This means the technical indicators are not showing a strong bullish or bearish trend.\n\n`;
+            analysisInfo += `You can still trade this symbol manually by:\n`;
+            analysisInfo += `1. Using the Manual Trade button\n`;
+            analysisInfo += `2. Setting your own entry, TP, and SL levels\n`;
+            analysisInfo += `3. Doing additional analysis\n\n`;
+            analysisInfo += `Would you like to open the manual trade form?`;
+            
+            if (confirm(analysisInfo)) {
+                openManualTradeForSymbol(symbol, 'LONG', 0);
+            }
+        }
+
+        // Function to exit all positions
+        function exitAllPositions() {
+            const confirmation = confirm(
+                `⚠️ EXIT ALL POSITIONS?\n\n` +
+                `This will exit ALL your active futures positions in USDT margin.\n\n` +
+                `⚠️ WARNING: This action cannot be undone!\n\n` +
+                `Are you sure you want to continue?`
+            );
+            
+            if (!confirmation) return;
+            
+            // Second confirmation for safety
+            const doubleConfirm = confirm(
+                `🚨 FINAL CONFIRMATION 🚨\n\n` +
+                `You are about to exit ALL active positions!\n\n` +
+                `Type "YES" in the next dialog to confirm.`
+            );
+            
+            if (!doubleConfirm) return;
+            
+            const userInput = prompt(
+                `Please type "YES" to confirm exiting all positions:`
+            );
+            
+            if (userInput !== "YES") {
+                alert("Action cancelled. You must type exactly 'YES' to confirm.");
+                return;
+            }
+            
+            // Disable the exit all button
+            const exitAllBtn = document.getElementById('exit-all-positions-btn');
+            const refreshBtn = document.getElementById('refresh-positions-btn');
+            const originalText = exitAllBtn.innerHTML;
+            
+            exitAllBtn.disabled = true;
+            refreshBtn.disabled = true;
+            exitAllBtn.innerHTML = '⏳ Exiting All Positions...';
+            
+            fetch('/positions/exit_all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    margin_currency: 'USDT',
+                    confirmation: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`✅ All positions exited successfully!\n\n${data.message || ''}\n\nPositions closed: ${data.closed_count || 'Unknown'}`);
+                    // Refresh positions to show updated data
+                    refreshPositions();
+                } else {
+                    alert(`❌ Error exiting all positions:\n\n${data.error || 'Unknown error'}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error exiting all positions:', error);
+                alert(`❌ Network error exiting all positions:\n\n${error.message}`);
+            })
+            .finally(() => {
+                exitAllBtn.disabled = false;
+                refreshBtn.disabled = false;
+                exitAllBtn.innerHTML = originalText;
+            });
+        }
+
+        // Function to exit a specific position
+        function exitPosition(positionId, pairDisplay, side, quantity) {
+            const confirmation = confirm(
+                `Exit ${side} position?\n\n` +
+                `Pair: ${pairDisplay}\n` +
+                `Quantity: ${quantity}\n` +
+                `Position ID: ${positionId}\n\n` +
+                `This action cannot be undone.`
+            );
+            
+            if (!confirmation) return;
+            
+            // Disable all exit buttons during request
+            const exitButtons = document.querySelectorAll('button[onclick*="exitPosition"]');
+            exitButtons.forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Exiting...';
+            });
+            
+            fetch('/positions/exit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    position_id: positionId,
+                    confirmation: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`✅ Position exited successfully!\n\n${data.message || ''}`);
+                    // Refresh positions to show updated data
+                    refreshPositions();
+                } else {
+                    alert(`❌ Error exiting position:\n\n${data.error || 'Unknown error'}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error exiting position:', error);
+                alert(`❌ Network error exiting position:\n\n${error.message}`);
+            })
+            .finally(() => {
+                // Re-enable buttons by refreshing positions
+                refreshPositions();
+            });
+        }
+
+        // Futures Positions Functions
+        function refreshPositions(isAutoRefresh = false) {
+            const refreshBtn = document.getElementById('refresh-positions-btn');
+            const positionsStatus = document.getElementById('positions-status');
+            const positionsList = document.getElementById('positions-list');
+            const originalText = refreshBtn.innerHTML;
+            
+            // Only update button if it's manual refresh
+            if (!isAutoRefresh) {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<div class="loading"></div> Loading...';
+            } else {
+                // Add auto-refresh indicator to button
+                refreshBtn.innerHTML = '<i class="fas fa-sync fa-spin"></i> Auto Refreshing...';
+            }
+            
+            // Update status only if no positions are currently displayed
+            if (positionsList.style.display === 'none' || positionsList.innerHTML === '') {
+                positionsStatus.style.display = 'block';
+                positionsStatus.querySelector('strong').textContent = 'Loading positions...';
+                positionsStatus.querySelector('small').textContent = 'Fetching data from CoinDCX...';
+                positionsStatus.querySelector('.status-indicator').className = 'status-indicator scanning';
+                positionsList.style.display = 'none';
+            }
+            
+            fetch('/positions?page=1&size=20&margin_currency=USDT')
+            .then(response => {
+                console.log('Positions response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Positions data:', data);
+                if (data.success) {
+                    displayPositions(data.positions);
+                } else {
+                    showPositionsError(data.error || 'Failed to load positions');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading positions:', error);
+                showPositionsError('Network error: ' + error.message);
+            })
+            .finally(() => {
+                if (!isAutoRefresh) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = originalText;
+                } else {
+                    // Reset button text for auto-refresh
+                    refreshBtn.innerHTML = '<i class="fas fa-refresh"></i> Refresh Positions';
+                    // Add timestamp to show last refresh
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString();
+                    refreshBtn.title = `Last auto-refreshed: ${timeStr}`;
+                }
+            });
+        }
+
+        function displayPositions(positionsData) {
+            const positionsStatus = document.getElementById('positions-status');
+            const positionsList = document.getElementById('positions-list');
+            
+            // Handle direct array response or nested data structure
+            let positions = [];
+            if (Array.isArray(positionsData)) {
+                positions = positionsData;
+            } else if (positionsData.data?.positions) {
+                positions = positionsData.data.positions;
+            } else if (positionsData.positions) {
+                positions = positionsData.positions;
+            }
+            
+            console.log('Processing positions:', positions);
+            
+            // Filter for positions with active positions or orders
+            const activePositions = positions.filter(pos => {
+                const activePos = parseFloat(pos.active_pos || 0);
+                const inactiveBuy = parseFloat(pos.inactive_pos_buy || 0);
+                const inactiveSell = parseFloat(pos.inactive_pos_sell || 0);
+                const margin = parseFloat(pos.locked_margin || 0);
+                return activePos !== 0 || inactiveBuy > 0 || inactiveSell > 0 || margin > 0;
+            });
+            
+            if (activePositions.length === 0) {
+                positionsStatus.style.display = 'block';
+                positionsStatus.querySelector('strong').textContent = 'No Active Positions';
+                positionsStatus.querySelector('small').textContent = 'You currently have no open futures positions or pending orders';
+                positionsStatus.querySelector('.status-indicator').className = 'status-indicator ready';
+                positionsList.style.display = 'none';
+                return;
+            }
+            
+            // Hide status and show positions list
+            positionsStatus.style.display = 'none';
+            positionsList.style.display = 'block';
+            
+            // Build positions table
+            let html = `
+                <div style="max-height: 350px; overflow-y: auto; overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; background: white;">
+                        <thead>
+                            <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                                <th style="padding: 8px 4px; text-align: left; font-weight: 600; color: #495057;">Pair</th>
+                                <th style="padding: 8px 4px; text-align: center; font-weight: 600; color: #495057;">Side</th>
+                                <th style="padding: 8px 4px; text-align: right; font-weight: 600; color: #495057;">Size</th>
+                                <th style="padding: 8px 4px; text-align: right; font-weight: 600; color: #495057;">Entry</th>
+                                <th style="padding: 8px 4px; text-align: right; font-weight: 600; color: #495057;">Current</th>
+                                <th style="padding: 8px 4px; text-align: right; font-weight: 600; color: #495057;">PnL</th>
+                                <th style="padding: 8px 4px; text-align: center; font-weight: 600; color: #495057;">Margin</th>
+                                <th style="padding: 8px 4px; text-align: center; font-weight: 600; color: #495057;">Lev</th>
+                                <th style="padding: 8px 4px; text-align: center; font-weight: 600; color: #495057;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            activePositions.forEach((position, index) => {
+                const pair = position.pair || 'Unknown';
+                const activePos = parseFloat(position.active_pos || 0);
+                const inactiveBuy = parseFloat(position.inactive_pos_buy || 0);
+                const inactiveSell = parseFloat(position.inactive_pos_sell || 0);
+                const avgPrice = parseFloat(position.avg_price || 0);
+                const markPrice = parseFloat(position.mark_price || 0);
+                const liquidationPrice = parseFloat(position.liquidation_price || 0);
+                const leverage = parseFloat(position.leverage || 1);
+                const lockedMargin = parseFloat(position.locked_margin || 0);
+                const marginType = position.margin_type || 'crossed';
+                const marginCurrency = position.margin_currency_short_name || 'USDT';
+                
+                // Determine position side and quantity
+                let side = 'None';
+                let quantity = 0;
+                let sideColor = '#6c757d';
+                let sideIcon = '⚪';
+                
+                if (activePos > 0) {
+                    side = 'LONG';
+                    quantity = activePos;
+                    sideColor = '#28a745';
+                    sideIcon = '📈';
+                } else if (activePos < 0) {
+                    side = 'SHORT';
+                    quantity = Math.abs(activePos);
+                    sideColor = '#dc3545';
+                    sideIcon = '📉';
+                } else if (inactiveBuy > 0) {
+                    side = 'BUY Orders';
+                    quantity = inactiveBuy;
+                    sideColor = '#28a745';
+                    sideIcon = '🔶';
+                } else if (inactiveSell > 0) {
+                    side = 'SELL Orders';
+                    quantity = inactiveSell;
+                    sideColor = '#dc3545';
+                    sideIcon = '�';
+                }
+                
+                // Calculate PnL if we have prices
+                let pnl = 0;
+                let pnlPercent = 0;
+                let pnlColor = '#6c757d';
+                let pnlIcon = '➖';
+                
+                if (avgPrice > 0 && markPrice > 0 && activePos !== 0) {
+                    if (activePos > 0) {
+                        // Long position PnL
+                        pnl = (markPrice - avgPrice) * quantity;
+                        pnlPercent = ((markPrice - avgPrice) / avgPrice) * 100;
+                    } else {
+                        // Short position PnL
+                        pnl = (avgPrice - markPrice) * quantity;
+                        pnlPercent = ((avgPrice - markPrice) / avgPrice) * 100;
+                    }
+                    
+                    pnlColor = pnl >= 0 ? '#28a745' : '#dc3545';
+                    pnlIcon = pnl >= 0 ? '📈' : '📉';
+                }
+                
+                // Status indicators
+                const hasTPSL = position.take_profit_trigger || position.stop_loss_trigger;
+                const tpslStatus = hasTPSL ? '🎯' : '⚠️';
+                const tpslText = hasTPSL ? 'TP/SL Set' : 'No TP/SL';
+                
+                // Format prices and displays
+                const pairDisplay = pair.replace('B-', '').replace('_', '/');
+                const entryDisplay = avgPrice > 0 ? `$${avgPrice.toFixed(4)}` : '—';
+                
+                // Current price with color based on position direction and price movement
+                let markDisplay = '—';
+                if (markPrice > 0) {
+                    let priceColor = '#495057'; // Default color
+                    let priceIcon = '';
+                    
+                    if (avgPrice > 0 && activePos !== 0) {
+                        if (activePos > 0) {
+                            // Long position: green if current > entry, red if current < entry
+                            priceColor = markPrice > avgPrice ? '#28a745' : '#dc3545';
+                            priceIcon = markPrice > avgPrice ? ' ▲' : ' ▼';
+                        } else {
+                            // Short position: green if current < entry, red if current > entry
+                            priceColor = markPrice < avgPrice ? '#28a745' : '#dc3545';
+                            priceIcon = markPrice < avgPrice ? ' ▼' : ' ▲';
+                        }
+                    }
+                    
+                    markDisplay = `<span style="color: ${priceColor}; font-weight: bold;">$${markPrice.toFixed(4)}${priceIcon}</span>`;
+                }
+                
+                const marginDisplay = `${lockedMargin.toFixed(2)}`;
+                const leverageDisplay = `${leverage.toFixed(0)}x`;
+                
+                // PnL display with color
+                let pnlDisplay = '—';
+                if (avgPrice > 0 && markPrice > 0 && activePos !== 0) {
+                    const pnlColor = pnl >= 0 ? '#28a745' : '#dc3545';
+                    const pnlIcon = pnl >= 0 ? '+' : '';
+                    pnlDisplay = `<div style="color: ${pnlColor}; font-weight: bold;">${pnlIcon}$${pnl.toFixed(2)}</div><div style="color: ${pnlColor}; font-size: 10px;">${pnlIcon}${pnlPercent.toFixed(1)}%</div>`;
+                }
+                
+                // Row background color
+                let rowBg = '';
+                if (activePos > 0) {
+                    rowBg = 'rgba(40, 167, 69, 0.05)';
+                } else if (activePos < 0) {
+                    rowBg = 'rgba(220, 53, 69, 0.05)';
+                } else if (inactiveBuy > 0 || inactiveSell > 0) {
+                    rowBg = 'rgba(255, 193, 7, 0.1)';
+                }
+                
+                html += `
+                    <tr style="border-bottom: 1px solid #dee2e6; background: ${rowBg};" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='${rowBg}'">
+                        <td style="padding: 8px 4px; font-weight: 600;">
+                            ${pairDisplay}
+                            ${liquidationPrice > 0 ? `<div style="color: #dc3545; font-size: 9px; font-weight: normal;">Liq: $${liquidationPrice.toFixed(2)}</div>` : ''}
+                        </td>
+                        <td style="padding: 8px 4px; text-align: center; color: ${sideColor}; font-weight: bold;">
+                            ${sideIcon} ${side}
+                        </td>
+                        <td style="padding: 8px 4px; text-align: right; font-weight: 600;">
+                            ${quantity.toFixed(4)}
+                        </td>
+                        <td style="padding: 8px 4px; text-align: right;">
+                            ${entryDisplay}
+                        </td>
+                        <td style="padding: 8px 4px; text-align: right;">
+                            ${markDisplay}
+                        </td>
+                        <td style="padding: 8px 4px; text-align: right;">
+                            ${pnlDisplay}
+                        </td>
+                        <td style="padding: 8px 4px; text-align: center; font-size: 10px;">
+                            ${marginDisplay} ${marginCurrency}
+                        </td>
+                        <td style="padding: 8px 4px; text-align: center; font-weight: 600;">
+                            ${leverageDisplay}
+                        </td>
+                        <td style="padding: 4px; text-align: center;">`;
+                
+                // Add exit button only for active positions (not just pending orders)
+                if (activePos !== 0 && position.id) {
+                    const positionId = position.id;
+                    const isLong = activePos > 0;
+                    const exitButtonColor = isLong ? '#dc3545' : '#28a745';  // Red for LONG, Green for SHORT
+                    const exitButtonIcon = isLong ? '🔻' : '🔺';
+                    
+                    html += `<button class="btn" style="background: ${exitButtonColor}; color: white; font-size: 9px; padding: 2px 6px; margin: 1px;" 
+                             onclick="exitPosition('${positionId}', '${pairDisplay}', '${side}', ${quantity})" 
+                             title="Exit ${side} position for ${pairDisplay}">
+                                ${exitButtonIcon} Exit
+                             </button>`;
+                } else if (inactiveBuy > 0 || inactiveSell > 0) {
+                    html += `<span style="color: #6c757d; font-size: 9px;">Orders Only</span>`;
+                } else {
+                    html += `<span style="color: #6c757d; font-size: 9px;">—</span>`;
+                }
+                
+                html += `</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            // Add summary
+            const totalActivePositions = activePositions.filter(pos => parseFloat(pos.active_pos || 0) !== 0).length;
+            const totalOrders = activePositions.filter(pos => 
+                parseFloat(pos.inactive_pos_buy || 0) > 0 || parseFloat(pos.inactive_pos_sell || 0) > 0
+            ).length;
+            const totalMargin = activePositions.reduce((sum, pos) => sum + parseFloat(pos.locked_margin || 0), 0);
+            const totalPnl = activePositions.reduce((sum, pos) => {
+                const activePos = parseFloat(pos.active_pos || 0);
+                const avgPrice = parseFloat(pos.avg_price || 0);
+                const markPrice = parseFloat(pos.mark_price || 0);
+                
+                if (avgPrice > 0 && markPrice > 0 && activePos !== 0) {
+                    if (activePos > 0) {
+                        return sum + (markPrice - avgPrice) * Math.abs(activePos);
+                    } else {
+                        return sum + (avgPrice - markPrice) * Math.abs(activePos);
+                    }
+                }
+                return sum;
+            }, 0);
+            
+            const totalPnlColor = totalPnl >= 0 ? '#28a745' : '#dc3545';
+            const totalPnlIcon = totalPnl >= 0 ? '+' : '';
+            
+            html += `
+                <div style="border-top: 2px solid #dee2e6; padding: 10px; margin-top: 5px; background: #f8f9fa; border-radius: 0 0 8px 8px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; text-align: center;">
+                        <div><strong>${totalActivePositions}</strong><br><small style="color: #6c757d;">Positions</small></div>
+                        <div><strong>${totalOrders}</strong><br><small style="color: #6c757d;">Orders</small></div>
+                        <div><strong>${totalMargin.toFixed(2)} USDT</strong><br><small style="color: #6c757d;">Total Margin</small></div>
+                    </div>
+                    ${totalPnl !== 0 ? `
+                        <div style="text-align: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid #dee2e6;">
+                            <strong style="color: ${totalPnlColor}; font-size: 13px;">
+                                ${totalPnlIcon}$${totalPnl.toFixed(2)} Total P&L
+                            </strong>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            positionsList.innerHTML = html;
+        }
+
+        function showPositionsError(error) {
+            const positionsStatus = document.getElementById('positions-status');
+            const positionsList = document.getElementById('positions-list');
+            
+            positionsStatus.style.display = 'block';
+            positionsStatus.querySelector('strong').textContent = 'Error Loading Positions';
+            positionsStatus.querySelector('small').textContent = error;
+            positionsStatus.querySelector('.status-indicator').className = 'status-indicator error';
+            positionsList.style.display = 'none';
+        }
+
+        // Futures Wallet Functions
+        function refreshWallet(isAutoRefresh = false) {
+            const refreshBtn = document.getElementById('refresh-wallet-btn');
+            const walletStatus = document.getElementById('wallet-status');
+            const walletList = document.getElementById('wallet-list');
+            const originalText = refreshBtn.innerHTML;
+            
+            // Only update button if it's manual refresh
+            if (!isAutoRefresh) {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<div class="loading"></div> Loading...';
+            } else {
+                // Add auto-refresh indicator to button
+                refreshBtn.innerHTML = '<i class="fas fa-sync fa-spin"></i> Auto Refreshing...';
+            }
+            
+            // Update status only if no wallet data is currently displayed
+            if (walletList.style.display === 'none' || walletList.innerHTML === '') {
+                walletStatus.style.display = 'block';
+                walletStatus.querySelector('strong').textContent = 'Loading wallet...';
+                walletStatus.querySelector('small').textContent = 'Fetching balance data from CoinDCX...';
+                walletStatus.querySelector('.status-indicator').className = 'status-indicator scanning';
+                walletList.style.display = 'none';
+            }
+            
+            fetch('/wallets')
+            .then(response => {
+                console.log('Wallet response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Wallet data:', data);
+                if (data.success) {
+                    displayWallet(data.wallets, data.summary);
+                } else {
+                    showWalletError(data.error || 'Failed to load wallet');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading wallet:', error);
+                showWalletError('Network error: ' + error.message);
+            })
+            .finally(() => {
+                if (!isAutoRefresh) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = originalText;
+                } else {
+                    // Reset button text for auto-refresh
+                    refreshBtn.innerHTML = '<i class="fas fa-refresh"></i> Refresh Wallet';
+                    // Add timestamp to show last refresh
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString();
+                    refreshBtn.title = `Last auto-refreshed: ${timeStr}`;
+                }
+            });
+        }
+
+        function displayWallet(walletsData, summary) {
+            const walletStatus = document.getElementById('wallet-status');
+            const walletList = document.getElementById('wallet-list');
+            
+            if (!walletsData || walletsData.length === 0) {
+                walletStatus.style.display = 'block';
+                walletStatus.querySelector('strong').textContent = 'No Wallet Data';
+                walletStatus.querySelector('small').textContent = 'No wallet information available';
+                walletStatus.querySelector('.status-indicator').className = 'status-indicator ready';
+                walletList.style.display = 'none';
+                return;
+            }
+            
+            // Hide status and show wallet list
+            walletStatus.style.display = 'none';
+            walletList.style.display = 'block';
+            
+            // Build wallet display
+            let html = `
+                <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="padding: 15px; border-bottom: 2px solid #dee2e6; background: #f8f9fa;">
+                        <h4 style="margin: 0; color: #495057; font-size: 14px;">💰 Account Balance Summary</h4>
+                    </div>
+                    
+                    <div style="padding: 15px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            `;
+            
+            // Summary cards
+            if (summary) {
+                const totalBalance = summary.total_balance || 0;
+                const totalLocked = summary.total_locked || 0;
+                const availableBalance = summary.available_balance || 0;
+                
+                html += `
+                    <div style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 12px; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 18px; font-weight: bold;">$${totalBalance.toFixed(2)}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">Total Balance</div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #007bff, #0056b3); color: white; padding: 12px; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 18px; font-weight: bold;">$${availableBalance.toFixed(2)}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">Available</div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #ffc107, #e0a800); color: white; padding: 12px; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 18px; font-weight: bold;">$${totalLocked.toFixed(2)}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">Locked/Margin</div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                        </div>
+                        
+                        <h5 style="color: #495057; margin: 0 0 10px 0; font-size: 13px;">💱 Currency Breakdown</h5>
+                        <div style="max-height: 200px; overflow-y: auto;">
+            `;
+            
+            // Currency details
+            walletsData.forEach((wallet, index) => {
+                const currency = wallet.currency_short_name || 'Unknown';
+                const balance = parseFloat(wallet.balance || 0);  // This is the available balance from API
+                const locked = parseFloat(wallet.locked_balance || 0);
+                const crossMargin = parseFloat(wallet.cross_user_margin || 0);
+                const crossOrderMargin = parseFloat(wallet.cross_order_margin || 0);
+                const totalBalance = balance + locked;  // Total = Available + Locked
+                const available = balance;  // API balance field is already the available amount
+                
+                // Currency icon
+                let currencyIcon = '💵';
+                if (currency === 'USDT') currencyIcon = '💰';
+                else if (currency === 'BTC') currencyIcon = '₿';
+                else if (currency === 'ETH') currencyIcon = 'Ξ';
+                
+                // Balance status color (based on available balance)
+                let balanceColor = '#28a745';
+                if (available < 1) balanceColor = '#dc3545';
+                else if (available < 10) balanceColor = '#ffc107';
+                
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 5px; background: ${index % 2 === 0 ? '#f8f9fa' : 'white'}; border-radius: 4px; border-left: 3px solid ${balanceColor};">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 16px;">${currencyIcon}</span>
+                            <div>
+                                <strong style="color: #495057; font-size: 13px;">${currency}</strong>
+                                <div style="font-size: 11px; color: #6c757d;">Total: ${totalBalance.toFixed(4)}</div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: bold; color: ${balanceColor}; font-size: 13px;">
+                                ${available.toFixed(4)} <span style="font-size: 10px; color: #6c757d;">avail</span>
+                            </div>
+                            ${locked > 0 ? `<div style="font-size: 10px; color: #ffc107;">Locked: ${locked.toFixed(4)}</div>` : ''}
+                            ${crossMargin > 0 ? `<div style="font-size: 10px; color: #007bff;">Margin: ${crossMargin.toFixed(4)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            walletList.innerHTML = html;
+        }
+
+        function showWalletError(error) {
+            const walletStatus = document.getElementById('wallet-status');
+            const walletList = document.getElementById('wallet-list');
+            
+            walletStatus.style.display = 'block';
+            walletStatus.querySelector('strong').textContent = 'Error Loading Wallet';
+            walletStatus.querySelector('small').textContent = error;
+            walletStatus.querySelector('.status-indicator').className = 'status-indicator error';
+            walletList.style.display = 'none';
+        }
+
+        // Wallet History Functions
+        function loadWalletHistory() {
+            const loadBtn = document.getElementById('load-history-btn');
+            const historyStatus = document.getElementById('wallet-history-status');
+            const historyList = document.getElementById('wallet-history-list');
+            const currencyFilter = document.getElementById('history-currency-filter').value;
+            const timeframe = document.getElementById('history-timeframe').value;
+            
+            const originalText = loadBtn.innerHTML;
+            loadBtn.disabled = true;
+            loadBtn.innerHTML = '<div class="loading"></div> Loading...';
+            
+            // Update status
+            historyStatus.style.display = 'block';
+            historyStatus.querySelector('strong').textContent = 'Loading daily history...';
+            historyStatus.querySelector('small').textContent = 'Fetching daily wallet balance data from database...';
+            historyStatus.querySelector('.status-indicator').className = 'status-indicator scanning';
+            historyList.style.display = 'none';
+            
+            // Build query parameters for daily data
+            let url = `/wallets/history/daily?days=${timeframe}`;
+            if (currencyFilter) {
+                url += `&currency=${currencyFilter}`;
+            }
+            
+            fetch(url)
+            .then(response => {
+                console.log('Daily wallet history response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Daily wallet history data:', data);
+                if (data.success) {
+                    displayWalletHistory(data.history, data.currency, data.days);
+                } else {
+                    showWalletHistoryError(data.error || 'Failed to load daily wallet history');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading daily wallet history:', error);
+                showWalletHistoryError('Network error: ' + error.message);
+            })
+            .finally(() => {
+                loadBtn.disabled = false;
+                loadBtn.innerHTML = originalText;
+            });
+        }
+
+        function displayWalletHistory(historyData, currency, days) {
+            const historyStatus = document.getElementById('wallet-history-status');
+            const historyList = document.getElementById('wallet-history-list');
+            
+            if (!historyData || historyData.length === 0) {
+                historyStatus.style.display = 'block';
+                historyStatus.querySelector('strong').textContent = 'No History Found';
+                historyStatus.querySelector('small').textContent = `No daily wallet balance history found for the selected timeframe (${days} days)`;
+                historyStatus.querySelector('.status-indicator').className = 'status-indicator ready';
+                historyList.style.display = 'none';
+                return;
+            }
+            
+            // Hide status and show history list
+            historyStatus.style.display = 'none';
+            historyList.style.display = 'block';
+            
+            // Group data by currency for better display
+            const groupedData = {};
+            historyData.forEach(record => {
+                if (!groupedData[record.currency]) {
+                    groupedData[record.currency] = [];
+                }
+                groupedData[record.currency].push(record);
+            });
+            
+            // Sort records by timestamp for each currency
+            Object.keys(groupedData).forEach(currencyName => {
+                groupedData[currencyName].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            });
+            
+            // Create or update the chart
+            createWalletHistoryChart(groupedData, currency, days);
+            
+            // Create summary section
+            createWalletHistorySummary(groupedData, currency, days, historyData.length);
+        }
+
+        let walletHistoryChart = null;
+
+        function createWalletHistoryChart(groupedData, currency, days) {
+            const ctx = document.getElementById('walletHistoryChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (walletHistoryChart) {
+                walletHistoryChart.destroy();
+            }
+            
+            // Prepare datasets for each currency
+            const datasets = [];
+            const colors = [
+                { border: '#007bff', background: 'rgba(0, 123, 255, 0.1)' },
+                { border: '#28a745', background: 'rgba(40, 167, 69, 0.1)' },
+                { border: '#ffc107', background: 'rgba(255, 193, 7, 0.1)' },
+                { border: '#dc3545', background: 'rgba(220, 53, 69, 0.1)' },
+                { border: '#6f42c1', background: 'rgba(111, 66, 193, 0.1)' },
+                { border: '#fd7e14', background: 'rgba(253, 126, 20, 0.1)' }
+            ];
+            
+            let colorIndex = 0;
+            Object.keys(groupedData).forEach(currencyName => {
+                const records = groupedData[currencyName];
+                const color = colors[colorIndex % colors.length];
+                
+                // Create dataset for available balance
+                datasets.push({
+                    label: `${currencyName} Available`,
+                    data: records.map(record => ({
+                        x: new Date(record.timestamp),
+                        y: parseFloat(record.available_balance)
+                    })),
+                    borderColor: color.border,
+                    backgroundColor: color.background,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                });
+                
+                // Create dataset for total balance if different from available
+                const hasLockedBalance = records.some(record => parseFloat(record.locked_balance) > 0);
+                if (hasLockedBalance) {
+                    datasets.push({
+                        label: `${currencyName} Total`,
+                        data: records.map(record => ({
+                            x: new Date(record.timestamp),
+                            y: parseFloat(record.total_balance)
+                        })),
+                        borderColor: color.border,
+                        backgroundColor: 'rgba(0,0,0,0)',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.3,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    });
+                }
+                
+                colorIndex++;
+            });
+            
+            // Create the chart
+            walletHistoryChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Daily Wallet Balance History - ${currency || 'All Currencies'} (Last ${days} days)`,
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    return `${label}: ${value.toFixed(4)}`;
+                                },
+                                title: function(tooltipItems) {
+                                    if (tooltipItems.length > 0) {
+                                        const date = new Date(tooltipItems[0].parsed.x);
+                                        return date.toLocaleDateString('en-US', { 
+                                            year: 'numeric', 
+                                            month: 'short', 
+                                            day: 'numeric' 
+                                        });
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'MMM dd',
+                                    week: 'MMM dd',
+                                    month: 'MMM yyyy'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Balance'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(4);
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        function createWalletHistorySummary(groupedData, currency, days, totalRecords) {
+            const summaryDiv = document.getElementById('wallet-history-summary');
+            
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h5 style="margin: 0; color: #495057;">
+                        📊 Daily Summary (${currency || 'All Currencies'} - Last ${days} days)
+                    </h5>
+                    <span style="color: #6c757d; font-size: 11px;">${totalRecords} daily records</span>
+                </div>
+            `;
+            
+            Object.keys(groupedData).forEach(currencyName => {
+                const records = groupedData[currencyName];
+                const firstRecord = records[0];
+                const lastRecord = records[records.length - 1];
+                
+                const startBalance = parseFloat(firstRecord.available_balance);
+                const endBalance = parseFloat(lastRecord.available_balance);
+                const change = endBalance - startBalance;
+                const changePercent = startBalance > 0 ? (change / startBalance) * 100 : 0;
+                
+                const changeColor = change >= 0 ? '#28a745' : '#dc3545';
+                const changeIcon = change >= 0 ? '📈' : '📉';
+                const changeText = change >= 0 ? '+' : '';
+                
+                const maxBalance = Math.max(...records.map(r => parseFloat(r.available_balance)));
+                const minBalance = Math.min(...records.map(r => parseFloat(r.available_balance)));
+                
+                html += `
+                    <div style="display: flex; justify-content: between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+                        <div style="flex: 1;">
+                            <strong style="color: #495057;">💰 ${currencyName}</strong>
+                            <div style="font-size: 10px; color: #6c757d; margin-top: 2px;">${records.length} records</div>
+                        </div>
+                        <div style="flex: 2; text-align: right;">
+                            <div style="font-size: 11px;">
+                                <span style="color: #495057;">Start:</span> <strong>${startBalance.toFixed(4)}</strong>
+                                <span style="margin-left: 10px; color: #495057;">End:</span> <strong>${endBalance.toFixed(4)}</strong>
+                            </div>
+                            <div style="font-size: 11px; margin-top: 2px;">
+                                <span style="color: ${changeColor}; font-weight: bold;">
+                                    ${changeIcon} ${changeText}${change.toFixed(4)} (${changePercent.toFixed(2)}%)
+                                </span>
+                            </div>
+                            <div style="font-size: 10px; color: #6c757d; margin-top: 2px;">
+                                Min: ${minBalance.toFixed(4)} | Max: ${maxBalance.toFixed(4)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            summaryDiv.innerHTML = html;
+        }
+
+        function showWalletHistoryError(error) {
+            const historyStatus = document.getElementById('wallet-history-status');
+            const historyList = document.getElementById('wallet-history-list');
+            
+            historyStatus.style.display = 'block';
+            historyStatus.querySelector('strong').textContent = 'Error Loading History';
+            historyStatus.querySelector('small').textContent = error;
+            historyStatus.querySelector('.status-indicator').className = 'status-indicator error';
+            historyList.style.display = 'none';
         }
     </script>
 </body>

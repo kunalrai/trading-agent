@@ -1,903 +1,484 @@
 """
-SQLite database module for storing trading data and signals.
+Database models and connection for Wallet Balance History
 """
-import sqlite3
-import logging
-from datetime import datetime
-from typing import List, Dict, Optional, Tuple
-import os
 
+import os
+import logging
+from datetime import datetime, timezone
+from typing import List, Optional, Dict, Any
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Index
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.exc import IntegrityError
+import json
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class TradingDatabase:
-    """SQLite database handler for trading data storage."""
+Base = declarative_base()
+
+class WalletBalanceHistory(Base):
+    """Model for storing wallet balance history over time"""
+    __tablename__ = 'wallet_balance_history'
     
-    def __init__(self, db_path: str = "trading_data.db"):
-        """Initialize database connection and create tables if needed."""
-        self.db_path = db_path
-        self.init_database()
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    currency = Column(String(10), nullable=False)  # e.g., 'USDT', 'BTC', etc.
+    available_balance = Column(Float, nullable=False, default=0.0)
+    locked_balance = Column(Float, nullable=False, default=0.0)
+    total_balance = Column(Float, nullable=False, default=0.0)
+    cross_user_margin = Column(Float, nullable=True, default=0.0)
+    cross_order_margin = Column(Float, nullable=True, default=0.0)
     
-    def init_database(self):
-        """Create database tables if they don't exist."""
+    # Store full wallet data as JSON for reference
+    raw_data = Column(Text, nullable=True)
+    
+    # Add indexes for better query performance
+    __table_args__ = (
+        Index('idx_currency_timestamp', 'currency', 'timestamp'),
+        Index('idx_timestamp', 'timestamp'),
+        Index('idx_currency', 'currency'),
+    )
+    
+    def __repr__(self):
+        return f"<WalletBalance(currency='{self.currency}', available={self.available_balance}, timestamp='{self.timestamp}')>"
+
+class WalletSummaryHistory(Base):
+    """Model for storing wallet summary snapshots over time"""
+    __tablename__ = 'wallet_summary_history'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    total_balance_usd = Column(Float, nullable=False, default=0.0)
+    total_available_usd = Column(Float, nullable=False, default=0.0)
+    total_locked_usd = Column(Float, nullable=False, default=0.0)
+    currencies_count = Column(Integer, nullable=False, default=0)
+    
+    # Store summary metadata
+    summary_data = Column(Text, nullable=True)
+    
+    # Add indexes
+    __table_args__ = (
+        Index('idx_summary_timestamp', 'timestamp'),
+    )
+    
+    def __repr__(self):
+        return f"<WalletSummary(total_usd={self.total_balance_usd}, timestamp='{self.timestamp}')>"
+
+class DatabaseManager:
+    """Database manager for wallet balance tracking"""
+    
+    def __init__(self, database_url: str = None):
+        self.database_url = database_url or os.getenv('DATABASE_URL')
+        if not self.database_url:
+            raise ValueError("DATABASE_URL not provided and not found in environment variables")
+        
+        self.engine = None
+        self.SessionLocal = None
+        self._initialize_database()
+    
+    def _initialize_database(self):
+        """Initialize database connection and create tables"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                # Create price_data table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS price_data (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        timestamp DATETIME NOT NULL,
-                        exchange TEXT NOT NULL,
-                        symbol TEXT NOT NULL,
-                        price REAL NOT NULL,
-                        volume REAL,
-                        ema_value REAL,
-                        gap REAL,
-                        signal_triggered BOOLEAN DEFAULT FALSE,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Create trading_signals table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS trading_signals (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        timestamp DATETIME NOT NULL,
-                        exchange TEXT NOT NULL,
-                        symbol TEXT NOT NULL,
-                        price REAL NOT NULL,
-                        ema_value REAL NOT NULL,
-                        gap REAL NOT NULL,
-                        signal_type TEXT NOT NULL,
-                        message TEXT,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Create alerts table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS alerts (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        condition_type TEXT NOT NULL,
-                        threshold_value REAL NOT NULL,
-                        notification_method TEXT NOT NULL,
-                        is_active BOOLEAN DEFAULT TRUE,
-                        symbol TEXT NOT NULL DEFAULT 'SOL/USDT',
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        last_triggered DATETIME
-                    )
-                ''')
-                
-                # Create settings table
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS settings (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        setting_key TEXT UNIQUE NOT NULL,
-                        setting_value TEXT NOT NULL,
-                        setting_type TEXT NOT NULL DEFAULT 'string',
-                        category TEXT NOT NULL DEFAULT 'general',
-                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                ''')
-                
-                # Create coin_data table for storing all coins data
-                cursor.execute('''
-                    CREATE TABLE IF NOT EXISTS coin_data (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        symbol TEXT NOT NULL,
-                        futures_symbol TEXT NOT NULL,
-                        current_price REAL NOT NULL,
-                        ema_50 REAL NOT NULL,
-                        price_diff REAL NOT NULL,
-                        diff_percentage REAL NOT NULL,
-                        volume_24h REAL NOT NULL,
-                        trend TEXT NOT NULL,
-                        last_updated DATETIME NOT NULL,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE(symbol) ON CONFLICT REPLACE
-                    )
-                ''')
-                
-                # Create index for faster queries
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_price_timestamp ON price_data(timestamp)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_signals_timestamp ON trading_signals(timestamp)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_alerts_active ON alerts(is_active)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_settings_key ON settings(setting_key)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_coin_data_symbol ON coin_data(symbol)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_coin_data_updated ON coin_data(last_updated)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_coin_data_diff_pct ON coin_data(diff_percentage)')
-                cursor.execute('CREATE INDEX IF NOT EXISTS idx_coin_data_volume ON coin_data(volume_24h)')
-                
-                # Insert default settings if they don't exist
-                default_settings = [
-                    ('breakout_threshold', '5', 'float', 'scanning'),
-                    ('volume_threshold', '150', 'float', 'scanning'),
-                    ('timeframe', '4h', 'string', 'scanning'),
-                    ('rsi_enabled', 'true', 'boolean', 'indicators'),
-                    ('macd_enabled', 'true', 'boolean', 'indicators'),
-                    ('bollinger_bands_enabled', 'false', 'boolean', 'indicators'),
-                    ('stochastic_enabled', 'false', 'boolean', 'indicators'),
-                    ('email_notifications', 'true', 'boolean', 'notifications'),
-                    ('desktop_notifications', 'false', 'boolean', 'notifications'),
-                    ('mobile_notifications', 'true', 'boolean', 'notifications'),
-                    ('notification_email', '', 'string', 'notifications'),
-                    ('watchlist', 'BTC,ETH,ADA,SOL', 'string', 'watchlist')
-                ]
-                
-                for key, value, type_, category in default_settings:
-                    cursor.execute('''
-                        INSERT OR IGNORE INTO settings 
-                        (setting_key, setting_value, setting_type, category)
-                        VALUES (?, ?, ?, ?)
-                    ''', (key, value, type_, category))
-                
-                conn.commit()
-                logger.info("Database initialized successfully")
-                
-        except sqlite3.Error as e:
-            logger.error(f"Database initialization error: {e}")
+            logger.info(f"🔗 Connecting to database...")
+            self.engine = create_engine(
+                self.database_url,
+                echo=False,  # Set to True for SQL query logging
+                pool_size=5,
+                max_overflow=10,
+                pool_pre_ping=True,  # Validate connections before use
+                pool_recycle=3600    # Recycle connections after 1 hour
+            )
+            
+            self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+            
+            # Create all tables
+            Base.metadata.create_all(bind=self.engine)
+            logger.info("✅ Database connection established and tables created")
+            
+        except Exception as e:
+            logger.error(f"❌ Database initialization failed: {e}")
             raise
     
-    def store_price_data(self, timestamp: datetime, exchange: str, symbol: str, 
-                        price: float, volume: float = None, ema_value: float = None, 
-                        gap: float = None, signal_triggered: bool = False):
-        """Store price data point in the database."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT INTO price_data 
-                    (timestamp, exchange, symbol, price, volume, ema_value, gap, signal_triggered)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (timestamp, exchange, symbol, price, volume, ema_value, gap, signal_triggered))
-                conn.commit()
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error storing price data: {e}")
+    def get_session(self) -> Session:
+        """Get a database session"""
+        return self.SessionLocal()
     
-    def store_trading_signal(self, timestamp: datetime, exchange: str, symbol: str,
-                           price: float, ema_value: float, gap: float, 
-                           signal_type: str = "BUY", message: str = None):
-        """Store trading signal in the database."""
+    def store_wallet_balance(self, wallet_data: Dict[str, Any], summary_data: Dict[str, Any] = None) -> bool:
+        """
+        Store wallet balance data to database
+        
+        Args:
+            wallet_data: Dictionary containing wallet information from API
+            summary_data: Optional summary data
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        session = self.get_session()
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT INTO trading_signals 
-                    (timestamp, exchange, symbol, price, ema_value, gap, signal_type, message)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (timestamp, exchange, symbol, price, ema_value, gap, signal_type, message))
-                conn.commit()
-                logger.info(f"Trading signal stored: {signal_type} at {price}")
+            current_time = datetime.now(timezone.utc)
+            
+            # Extract wallets from the data structure
+            wallets = []
+            if isinstance(wallet_data, dict):
+                if 'wallets' in wallet_data:
+                    wallets = wallet_data['wallets']
+                elif isinstance(wallet_data.get('data'), list):
+                    wallets = wallet_data['data']
+                else:
+                    # Assume it's a single wallet entry
+                    wallets = [wallet_data]
+            elif isinstance(wallet_data, list):
+                wallets = wallet_data
+            
+            # Store individual wallet balances
+            for wallet in wallets:
+                if not isinstance(wallet, dict):
+                    continue
+                    
+                currency = wallet.get('currency_short_name', 'UNKNOWN')
+                available = float(wallet.get('balance', 0))  # API balance is available amount
+                locked = float(wallet.get('locked_balance', 0))
+                total = available + locked  # Calculate total
+                cross_margin = float(wallet.get('cross_user_margin', 0))
+                cross_order_margin = float(wallet.get('cross_order_margin', 0))
                 
-        except sqlite3.Error as e:
-            logger.error(f"Error storing trading signal: {e}")
-    
-    def get_recent_price_data(self, symbol: str = "SOL/USDT", limit: int = 100) -> List[Dict]:
-        """Get recent price data for charts."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    SELECT timestamp, price, ema_value, gap, signal_triggered
-                    FROM price_data 
-                    WHERE symbol = ?
-                    ORDER BY timestamp DESC 
-                    LIMIT ?
-                ''', (symbol, limit))
+                # Skip zero balances to keep database clean
+                if total == 0 and locked == 0:
+                    continue
                 
-                rows = cursor.fetchall()
-                return [
-                    {
-                        'timestamp': row[0],
-                        'price': row[1],
-                        'ema_value': row[2],
-                        'gap': row[3],
-                        'signal_triggered': bool(row[4])
-                    }
-                    for row in rows
-                ]
+                wallet_record = WalletBalanceHistory(
+                    timestamp=current_time,
+                    currency=currency,
+                    available_balance=available,
+                    locked_balance=locked,
+                    total_balance=total,
+                    cross_user_margin=cross_margin,
+                    cross_order_margin=cross_order_margin,
+                    raw_data=json.dumps(wallet, default=str)
+                )
                 
-        except sqlite3.Error as e:
-            logger.error(f"Error retrieving price data: {e}")
-            return []
-    
-    def get_trading_signals(self, symbol: str = "SOL/USDT", limit: int = 50) -> List[Dict]:
-        """Get recent trading signals."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    SELECT timestamp, price, ema_value, gap, signal_type, message
-                    FROM trading_signals 
-                    WHERE symbol = ?
-                    ORDER BY timestamp DESC 
-                    LIMIT ?
-                ''', (symbol, limit))
-                
-                rows = cursor.fetchall()
-                return [
-                    {
-                        'timestamp': row[0],
-                        'price': row[1],
-                        'ema_value': row[2],
-                        'gap': row[3],
-                        'signal_type': row[4],
-                        'message': row[5]
-                    }
-                    for row in rows
-                ]
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error retrieving trading signals: {e}")
-            return []
-    
-    def get_chart_data(self, symbol: str = "SOL/USDT", hours: int = 24) -> Dict:
-        """Get formatted chart data for the last N hours."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    SELECT timestamp, price, ema_value, gap, volume
-                    FROM price_data 
-                    WHERE symbol = ? 
-                    AND datetime(timestamp) >= datetime('now', '-{} hours')
-                    ORDER BY timestamp ASC
-                '''.format(hours), (symbol,))
-                
-                rows = cursor.fetchall()
-                
-                if not rows:
-                    return {'labels': [], 'prices': [], 'ema_values': [], 'gaps': [], 'volumes': []}
-                
-                labels = []
-                prices = []
-                ema_values = []
-                gaps = []
-                volumes = []
-                
-                for row in rows:
-                    # Format timestamp for chart labels
-                    dt = datetime.fromisoformat(row[0])
-                    labels.append(dt.strftime('%H:%M'))
-                    prices.append(row[1])
-                    ema_values.append(row[2] if row[2] is not None else 0)
-                    gaps.append(row[3] if row[3] is not None else 0)
-                    volumes.append(row[4] if row[4] is not None else 0)
-                
-                return {
-                    'labels': labels,
-                    'prices': prices,
-                    'ema_values': ema_values,
-                    'gaps': gaps,
-                    'volumes': volumes
-                }
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error retrieving chart data: {e}")
-            return {'labels': [], 'prices': [], 'ema_values': [], 'gaps': [], 'volumes': []}
-    
-    def get_database_stats(self) -> Dict:
-        """Get database statistics."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                # Count records
-                cursor.execute('SELECT COUNT(*) FROM price_data')
-                price_count = cursor.fetchone()[0]
-                
-                cursor.execute('SELECT COUNT(*) FROM trading_signals')
-                signals_count = cursor.fetchone()[0]
-                
-                # Get latest data point
-                cursor.execute('SELECT MAX(timestamp) FROM price_data')
-                latest_timestamp = cursor.fetchone()[0]
-                
-                # Get database file size
-                db_size = os.path.getsize(self.db_path) if os.path.exists(self.db_path) else 0
-                
-                return {
-                    'price_records': price_count,
-                    'signal_records': signals_count,
-                    'latest_timestamp': latest_timestamp,
-                    'database_size_kb': round(db_size / 1024, 2)
-                }
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error getting database stats: {e}")
-            return {}
-    
-    def get_database_size_mb(self) -> float:
-        """Get database file size in MB."""
-        try:
-            if os.path.exists(self.db_path):
-                size_bytes = os.path.getsize(self.db_path)
-                size_mb = size_bytes / (1024 * 1024)  # Convert to MB
-                return round(size_mb, 2)
-            return 0.0
+                session.add(wallet_record)
+            
+            # Store wallet summary if provided
+            if summary_data:
+                summary_record = WalletSummaryHistory(
+                    timestamp=current_time,
+                    total_balance_usd=float(summary_data.get('total_balance', 0)),
+                    total_available_usd=float(summary_data.get('available_balance', 0)),
+                    total_locked_usd=float(summary_data.get('total_locked', 0)),
+                    currencies_count=len(wallets),
+                    summary_data=json.dumps(summary_data, default=str)
+                )
+                session.add(summary_record)
+            
+            session.commit()
+            logger.info(f"💾 Stored wallet data for {len(wallets)} currencies at {current_time}")
+            return True
+            
         except Exception as e:
-            logger.error(f"Error getting database size: {e}")
-            return 0.0
-    
-    def cleanup_old_data(self, days: int = 30):
-        """Clean up data older than specified days."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                # Delete old price data
-                cursor.execute('''
-                    DELETE FROM price_data 
-                    WHERE datetime(timestamp) < datetime('now', '-{} days')
-                '''.format(days))
-                
-                deleted_price = cursor.rowcount
-                
-                # Delete old signals
-                cursor.execute('''
-                    DELETE FROM trading_signals 
-                    WHERE datetime(timestamp) < datetime('now', '-{} days')
-                '''.format(days))
-                
-                deleted_signals = cursor.rowcount
-                
-                # Delete old alerts that have been triggered (keep active ones)
-                cursor.execute('''
-                    DELETE FROM alerts 
-                    WHERE triggered_at IS NOT NULL 
-                    AND datetime(triggered_at) < datetime('now', '-{} days')
-                '''.format(days))
-                
-                deleted_alerts = cursor.rowcount
-                conn.commit()
-                
-                total_deleted = deleted_price + deleted_signals + deleted_alerts
-                logger.info(f"Cleaned up {deleted_price} price records, {deleted_signals} signal records, "
-                           f"and {deleted_alerts} old alerts (total: {total_deleted})")
-                
-                # Vacuum to reclaim space
-                cursor.execute('VACUUM')
-                logger.info("Database vacuum completed")
-                
-                return total_deleted
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error cleaning up old data: {e}")
-            return 0
-    
-    def create_alert(self, condition_type: str, threshold_value: float, 
-                    notification_method: str, symbol: str = "SOL/USDT") -> int:
-        """Create a new alert."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT INTO alerts 
-                    (condition_type, threshold_value, notification_method, symbol)
-                    VALUES (?, ?, ?, ?)
-                ''', (condition_type, threshold_value, notification_method, symbol))
-                conn.commit()
-                alert_id = cursor.lastrowid
-                logger.info(f"Alert created: {condition_type} at {threshold_value}")
-                return alert_id
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error creating alert: {e}")
-            return 0
-    
-    def get_active_alerts(self, symbol: str = None) -> List[Dict]:
-        """Get all active alerts."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                if symbol:
-                    # Filter by specific symbol
-                    cursor.execute('''
-                        SELECT id, condition_type, threshold_value, notification_method, 
-                               created_at, last_triggered, is_active, symbol
-                        FROM alerts 
-                        WHERE is_active = TRUE AND symbol = ?
-                        ORDER BY created_at DESC
-                    ''', (symbol,))
-                else:
-                    # Get all active alerts regardless of symbol
-                    cursor.execute('''
-                        SELECT id, condition_type, threshold_value, notification_method, 
-                               created_at, last_triggered, is_active, symbol
-                        FROM alerts 
-                        WHERE is_active = TRUE
-                        ORDER BY created_at DESC
-                    ''')
-                
-                rows = cursor.fetchall()
-                return [
-                    {
-                        'id': row[0],
-                        'condition_type': row[1],
-                        'threshold_value': row[2],
-                        'notification_method': row[3],
-                        'created_at': row[4],
-                        'last_triggered': row[5],
-                        'is_active': row[6],
-                        'symbol': row[7]
-                    }
-                    for row in rows
-                ]
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error retrieving alerts: {e}")
-            return []
-    
-    def update_alert_status(self, alert_id: int, is_active: bool) -> bool:
-        """Update alert active status."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    UPDATE alerts 
-                    SET is_active = ?
-                    WHERE id = ?
-                ''', (is_active, alert_id))
-                conn.commit()
-                return cursor.rowcount > 0
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error updating alert status: {e}")
+            session.rollback()
+            logger.error(f"❌ Error storing wallet data: {e}")
             return False
+        finally:
+            session.close()
     
-    def toggle_alert(self, alert_id: int) -> bool:
-        """Toggle alert active status."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    UPDATE alerts 
-                    SET is_active = NOT is_active
-                    WHERE id = ?
-                ''', (alert_id,))
-                conn.commit()
-                return cursor.rowcount > 0
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error toggling alert status: {e}")
-            return False
-    
-    def trigger_alert(self, alert_id: int) -> bool:
-        """Mark alert as triggered."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    UPDATE alerts 
-                    SET last_triggered = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                ''', (alert_id,))
-                conn.commit()
-                return cursor.rowcount > 0
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error triggering alert: {e}")
-            return False
-    
-    def delete_alert(self, alert_id: int) -> bool:
-        """Delete an alert."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('DELETE FROM alerts WHERE id = ?', (alert_id,))
-                conn.commit()
-                return cursor.rowcount > 0
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error deleting alert: {e}")
-            return False
-    
-    def check_alerts(self, current_price: float, current_volume: float, 
-                    ema_value: float, symbol: str = "SOL/USDT") -> List[Dict]:
-        """Check if any alerts should be triggered."""
-        triggered_alerts = []
-        alerts = self.get_active_alerts(symbol)
+    def get_wallet_history(self, currency: str = None, hours: int = 24) -> List[Dict[str, Any]]:
+        """
+        Get wallet balance history
         
-        for alert in alerts:
-            should_trigger = False
-            condition = alert['condition_type']
-            threshold = alert['threshold_value']
+        Args:
+            currency: Optional currency filter (e.g., 'USDT')
+            hours: Number of hours of history to retrieve
             
-            if condition == "Price crosses EMA":
-                should_trigger = abs(current_price - ema_value) <= threshold
-            elif condition == "Price above EMA":
-                should_trigger = current_price > ema_value + threshold
-            elif condition == "Price below EMA":
-                should_trigger = current_price < ema_value - threshold
-            elif condition == "Volume spike":
-                # Check if volume is X% higher than threshold
-                should_trigger = current_volume > (threshold / 100)
+        Returns:
+            List of wallet balance records
+        """
+        session = self.get_session()
+        try:
+            from datetime import timedelta
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
             
-            if should_trigger:
-                self.trigger_alert(alert['id'])
-                triggered_alerts.append(alert)
+            query = session.query(WalletBalanceHistory).filter(
+                WalletBalanceHistory.timestamp >= cutoff_time
+            )
+            
+            if currency:
+                query = query.filter(WalletBalanceHistory.currency == currency)
+            
+            records = query.order_by(WalletBalanceHistory.timestamp.desc()).all()
+            
+            result = []
+            for record in records:
+                result.append({
+                    'id': record.id,
+                    'timestamp': record.timestamp.isoformat(),
+                    'currency': record.currency,
+                    'available_balance': record.available_balance,
+                    'locked_balance': record.locked_balance,
+                    'total_balance': record.total_balance,
+                    'cross_user_margin': record.cross_user_margin,
+                    'cross_order_margin': record.cross_order_margin
+                })
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Error retrieving wallet history: {e}")
+            return []
+        finally:
+            session.close()
+    
+    def get_daily_wallet_history(self, currency: str = None, days: int = 30) -> List[Dict[str, Any]]:
+        """
+        Get wallet balance history aggregated by day (one data point per day)
         
-        return triggered_alerts
-    
-    def get_alert_history(self, symbol: str = None) -> List[Dict]:
-        """Get alert history (triggered alerts)."""
+        Args:
+            currency: Optional currency filter (e.g., 'USDT')
+            days: Number of days of history to retrieve
+            
+        Returns:
+            List of daily wallet balance records (latest balance per day)
+        """
+        session = self.get_session()
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                if symbol:
-                    cursor.execute('''
-                        SELECT id, condition_type, threshold_value, notification_method, 
-                               symbol, last_triggered, created_at
-                        FROM alerts 
-                        WHERE symbol = ? AND last_triggered IS NOT NULL
-                        ORDER BY last_triggered DESC
-                        LIMIT 50
-                    ''', (symbol,))
-                else:
-                    cursor.execute('''
-                        SELECT id, condition_type, threshold_value, notification_method, 
-                               symbol, last_triggered, created_at
-                        FROM alerts 
-                        WHERE last_triggered IS NOT NULL
-                        ORDER BY last_triggered DESC
-                        LIMIT 50
-                    ''')
-                
-                columns = [description[0] for description in cursor.description]
-                alerts = []
-                for row in cursor.fetchall():
-                    alert_dict = dict(zip(columns, row))
-                    alerts.append(alert_dict)
-                
-                return alerts
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error retrieving alert history: {e}")
+            from datetime import timedelta
+            from sqlalchemy import func, case
+            
+            cutoff_time = datetime.now(timezone.utc) - timedelta(days=days)
+            
+            # Create a subquery to get the latest record for each currency and day
+            # We use date_trunc to group by day
+            subquery = session.query(
+                WalletBalanceHistory.currency,
+                func.date_trunc('day', WalletBalanceHistory.timestamp).label('day'),
+                func.max(WalletBalanceHistory.timestamp).label('max_timestamp')
+            ).filter(
+                WalletBalanceHistory.timestamp >= cutoff_time
+            ).group_by(
+                WalletBalanceHistory.currency,
+                func.date_trunc('day', WalletBalanceHistory.timestamp)
+            ).subquery()
+            
+            # Join to get the complete records for the latest timestamp of each day
+            query = session.query(WalletBalanceHistory).join(
+                subquery,
+                (WalletBalanceHistory.currency == subquery.c.currency) &
+                (WalletBalanceHistory.timestamp == subquery.c.max_timestamp)
+            )
+            
+            if currency:
+                query = query.filter(WalletBalanceHistory.currency == currency)
+            
+            records = query.order_by(WalletBalanceHistory.timestamp.desc()).all()
+            
+            result = []
+            for record in records:
+                result.append({
+                    'id': record.id,
+                    'timestamp': record.timestamp.isoformat(),
+                    'currency': record.currency,
+                    'available_balance': record.available_balance,
+                    'locked_balance': record.locked_balance,
+                    'total_balance': record.total_balance,
+                    'cross_user_margin': record.cross_user_margin,
+                    'cross_order_margin': record.cross_order_margin
+                })
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Error retrieving daily wallet history: {e}")
             return []
+        finally:
+            session.close()
     
-    def get_setting(self, key: str, default_value: str = None) -> str:
-        """Get a setting value by key."""
+    def get_balance_summary_history(self, hours: int = 24) -> List[Dict[str, Any]]:
+        """
+        Get wallet summary history
+        
+        Args:
+            hours: Number of hours of history to retrieve
+            
+        Returns:
+            List of wallet summary records
+        """
+        session = self.get_session()
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('SELECT setting_value FROM settings WHERE setting_key = ?', (key,))
-                result = cursor.fetchone()
-                return result[0] if result else default_value
-        except sqlite3.Error as e:
-            logger.error(f"Error getting setting {key}: {e}")
-            return default_value
+            from datetime import timedelta
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+            
+            records = session.query(WalletSummaryHistory).filter(
+                WalletSummaryHistory.timestamp >= cutoff_time
+            ).order_by(WalletSummaryHistory.timestamp.desc()).all()
+            
+            result = []
+            for record in records:
+                result.append({
+                    'id': record.id,
+                    'timestamp': record.timestamp.isoformat(),
+                    'total_balance_usd': record.total_balance_usd,
+                    'total_available_usd': record.total_available_usd,
+                    'total_locked_usd': record.total_locked_usd,
+                    'currencies_count': record.currencies_count
+                })
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Error retrieving summary history: {e}")
+            return []
+        finally:
+            session.close()
     
-    def set_setting(self, key: str, value: str, setting_type: str = 'string', category: str = 'general') -> bool:
-        """Set a setting value by key."""
+    def cleanup_old_data(self, days: int = 30) -> int:
+        """
+        Clean up old wallet data beyond specified days
+        
+        Args:
+            days: Number of days to keep
+            
+        Returns:
+            Number of records deleted
+        """
+        session = self.get_session()
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT OR REPLACE INTO settings 
-                    (setting_key, setting_value, setting_type, category, updated_at)
-                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-                ''', (key, value, setting_type, category))
-                conn.commit()
-                return True
-        except sqlite3.Error as e:
-            logger.error(f"Error setting {key}: {e}")
-            return False
+            from datetime import timedelta
+            cutoff_time = datetime.now(timezone.utc) - timedelta(days=days)
+            
+            # Delete old wallet balance records
+            deleted_wallets = session.query(WalletBalanceHistory).filter(
+                WalletBalanceHistory.timestamp < cutoff_time
+            ).delete()
+            
+            # Delete old summary records
+            deleted_summaries = session.query(WalletSummaryHistory).filter(
+                WalletSummaryHistory.timestamp < cutoff_time
+            ).delete()
+            
+            session.commit()
+            
+            total_deleted = deleted_wallets + deleted_summaries
+            logger.info(f"🧹 Cleaned up {total_deleted} old records (older than {days} days)")
+            return total_deleted
+            
+        except Exception as e:
+            session.rollback()
+            logger.error(f"❌ Error during cleanup: {e}")
+            return 0
+        finally:
+            session.close()
     
-    def get_settings_by_category(self, category: str) -> Dict[str, str]:
-        """Get all settings for a specific category."""
+    def get_latest_balances(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get the latest balance for each currency
+        
+        Returns:
+            Dictionary with currency as key and latest balance data as value
+        """
+        session = self.get_session()
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    SELECT setting_key, setting_value, setting_type 
-                    FROM settings 
-                    WHERE category = ?
-                ''', (category,))
-                results = cursor.fetchall()
-                
-                settings = {}
-                for key, value, setting_type in results:
-                    # Convert based on type
-                    if setting_type == 'boolean':
-                        settings[key] = value.lower() == 'true'
-                    elif setting_type == 'float':
-                        settings[key] = float(value)
-                    elif setting_type == 'int':
-                        settings[key] = int(value)
-                    else:
-                        settings[key] = value
-                
-                return settings
-        except sqlite3.Error as e:
-            logger.error(f"Error getting settings for category {category}: {e}")
-            return {}
-    
-    def get_all_settings(self) -> Dict[str, Dict]:
-        """Get all settings grouped by category."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    SELECT setting_key, setting_value, setting_type, category 
-                    FROM settings 
-                    ORDER BY category, setting_key
-                ''')
-                results = cursor.fetchall()
-                
-                settings = {}
-                for key, value, setting_type, category in results:
-                    if category not in settings:
-                        settings[category] = {}
-                    
-                    # Convert based on type
-                    if setting_type == 'boolean':
-                        settings[category][key] = value.lower() == 'true'
-                    elif setting_type == 'float':
-                        settings[category][key] = float(value)
-                    elif setting_type == 'int':
-                        settings[category][key] = int(value)
-                    else:
-                        settings[category][key] = value
-                
-                return settings
-        except sqlite3.Error as e:
-            logger.error(f"Error getting all settings: {e}")
-            return {}
-    
-    def update_multiple_settings(self, settings_dict: Dict[str, any]) -> bool:
-        """Update multiple settings at once."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                # Define category mapping for different settings
-                category_map = {
-                    'breakout_threshold': 'scanning',
-                    'volume_threshold': 'scanning',
-                    'timeframe': 'scanning',
-                    'rsi_enabled': 'indicators',
-                    'macd_enabled': 'indicators',
-                    'bollinger_bands_enabled': 'indicators',
-                    'stochastic_enabled': 'indicators',
-                    'email_notifications': 'notifications',
-                    'desktop_notifications': 'notifications',
-                    'mobile_notifications': 'notifications',
-                    'notification_email': 'notifications',
-                    'watchlist': 'watchlist'
+            from sqlalchemy import func
+            
+            # Subquery to get the latest timestamp for each currency
+            subquery = session.query(
+                WalletBalanceHistory.currency,
+                func.max(WalletBalanceHistory.timestamp).label('max_timestamp')
+            ).group_by(WalletBalanceHistory.currency).subquery()
+            
+            # Join to get the complete records for latest timestamps
+            records = session.query(WalletBalanceHistory).join(
+                subquery,
+                (WalletBalanceHistory.currency == subquery.c.currency) &
+                (WalletBalanceHistory.timestamp == subquery.c.max_timestamp)
+            ).all()
+            
+            result = {}
+            for record in records:
+                result[record.currency] = {
+                    'available_balance': record.available_balance,
+                    'locked_balance': record.locked_balance,
+                    'total_balance': record.total_balance,
+                    'timestamp': record.timestamp.isoformat(),
+                    'cross_user_margin': record.cross_user_margin,
+                    'cross_order_margin': record.cross_order_margin
                 }
-                
-                for key, value in settings_dict.items():
-                    # Determine type
-                    if isinstance(value, bool):
-                        setting_type = 'boolean'
-                        setting_value = str(value).lower()
-                    elif isinstance(value, float):
-                        setting_type = 'float'
-                        setting_value = str(value)
-                    elif isinstance(value, int):
-                        setting_type = 'int'
-                        setting_value = str(value)
-                    else:
-                        setting_type = 'string'
-                        setting_value = str(value)
-                    
-                    # Get category for this setting
-                    category = category_map.get(key, 'general')
-                    
-                    cursor.execute('''
-                        INSERT OR REPLACE INTO settings 
-                        (setting_key, setting_value, setting_type, category, updated_at)
-                        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-                    ''', (key, setting_value, setting_type, category))
-                
-                conn.commit()
-                logger.info(f"Updated {len(settings_dict)} settings")
-                return True
-        except sqlite3.Error as e:
-            logger.error(f"Error updating multiple settings: {e}")
-            return False
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Error retrieving latest balances: {e}")
+            return {}
+        finally:
+            session.close()
+
+# Global database manager instance
+db_manager = None
+
+def get_db_manager() -> DatabaseManager:
+    """Get or create global database manager instance"""
+    global db_manager
+    if db_manager is None:
+        db_manager = DatabaseManager()
+    return db_manager
+
+def store_wallet_data(wallet_data: Dict[str, Any], summary_data: Dict[str, Any] = None) -> bool:
+    """Convenience function to store wallet data"""
+    try:
+        manager = get_db_manager()
+        return manager.store_wallet_balance(wallet_data, summary_data)
+    except Exception as e:
+        logger.error(f"❌ Failed to store wallet data: {e}")
+        return False
+
+if __name__ == "__main__":
+    # Test the database connection and models
+    print("🧪 Testing database connection...")
     
-    def store_coin_data(self, coin_data: dict):
-        """Store or update coin data in the database."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT OR REPLACE INTO coin_data 
-                    (symbol, futures_symbol, current_price, ema_50, price_diff, 
-                     diff_percentage, volume_24h, trend, last_updated)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    coin_data['symbol'],
-                    coin_data['futures_symbol'],
-                    coin_data['current_price'],
-                    coin_data['ema_50'],
-                    coin_data['price_diff'],
-                    coin_data['diff_percentage'],
-                    coin_data['volume_24h'],
-                    coin_data['trend'],
-                    datetime.now()
-                ))
-                conn.commit()
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error storing coin data for {coin_data.get('symbol', 'unknown')}: {e}")
-    
-    def store_multiple_coin_data(self, coins_data: list):
-        """Store multiple coin data records efficiently."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                # Prepare data for batch insert
-                data_tuples = []
-                current_time = datetime.now()
-                
-                for coin_data in coins_data:
-                    data_tuples.append((
-                        coin_data['symbol'],
-                        coin_data['futures_symbol'],
-                        coin_data['current_price'],
-                        coin_data['ema_50'],
-                        coin_data['price_diff'],
-                        coin_data['diff_percentage'],
-                        coin_data['volume_24h'],
-                        coin_data['trend'],
-                        current_time
-                    ))
-                
-                # Batch insert
-                cursor.executemany('''
-                    INSERT OR REPLACE INTO coin_data 
-                    (symbol, futures_symbol, current_price, ema_50, price_diff, 
-                     diff_percentage, volume_24h, trend, last_updated)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', data_tuples)
-                
-                conn.commit()
-                logger.info(f"Stored {len(coins_data)} coin data records")
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error storing multiple coin data: {e}")
-    
-    def get_all_coin_data(self, order_by: str = 'symbol', order_direction: str = 'ASC', 
-                         limit: int = None, offset: int = None):
-        """Get all coin data from database with optional sorting and pagination."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                # Build query with optional ordering and pagination
-                valid_columns = ['symbol', 'current_price', 'ema_50', 'price_diff', 
-                               'diff_percentage', 'volume_24h', 'last_updated']
-                
-                if order_by not in valid_columns:
-                    order_by = 'symbol'
-                
-                if order_direction.upper() not in ['ASC', 'DESC']:
-                    order_direction = 'ASC'
-                
-                query = f'''
-                    SELECT symbol, futures_symbol, current_price, ema_50, price_diff,
-                           diff_percentage, volume_24h, trend, last_updated
-                    FROM coin_data 
-                    ORDER BY {order_by} {order_direction}
-                '''
-                
-                if limit:
-                    query += f' LIMIT {limit}'
-                    if offset:
-                        query += f' OFFSET {offset}'
-                
-                print(f"🔍 Executing SQL query: {query}")
-                cursor.execute(query)
-                rows = cursor.fetchall()
-                print(f"📊 SQL returned {len(rows)} rows")
-                
-                # Convert to list of dictionaries
-                columns = ['symbol', 'futures_symbol', 'current_price', 'ema_50', 'price_diff',
-                          'diff_percentage', 'volume_24h', 'trend', 'last_updated']
-                
-                coin_data_list = []
-                for row in rows:
-                    coin_dict = dict(zip(columns, row))
-                    # Format timestamp
-                    if coin_dict['last_updated']:
-                        coin_dict['timestamp'] = coin_dict['last_updated']
-                    coin_data_list.append(coin_dict)
-                
-                return coin_data_list
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error retrieving coin data: {e}")
-            return []
-    
-    def get_coin_data_stats(self):
-        """Get statistics about coin data in database."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute('SELECT COUNT(*) FROM coin_data')
-                total_coins = cursor.fetchone()[0]
-                
-                cursor.execute('SELECT MAX(last_updated) FROM coin_data')
-                last_update = cursor.fetchone()[0]
-                
-                cursor.execute('''
-                    SELECT COUNT(*) FROM coin_data 
-                    WHERE diff_percentage > 0
-                ''')
-                bullish_count = cursor.fetchone()[0]
-                
-                cursor.execute('''
-                    SELECT COUNT(*) FROM coin_data 
-                    WHERE diff_percentage < 0
-                ''')
-                bearish_count = cursor.fetchone()[0]
-                
-                return {
-                    'total_coins': total_coins,
-                    'last_update': last_update,
-                    'bullish_count': bullish_count,
-                    'bearish_count': bearish_count,
-                    'neutral_count': total_coins - bullish_count - bearish_count
+    try:
+        manager = DatabaseManager()
+        print("✅ Database connection successful!")
+        
+        # Test storing sample data
+        sample_wallet = {
+            "wallets": [
+                {
+                    "currency_short_name": "USDT",
+                    "balance": 100.50,
+                    "locked_balance": 10.25,
+                    "cross_user_margin": 5.0,
+                    "cross_order_margin": 2.0
+                },
+                {
+                    "currency_short_name": "BTC",
+                    "balance": 0.005,
+                    "locked_balance": 0.001,
+                    "cross_user_margin": 0.0,
+                    "cross_order_margin": 0.0
                 }
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error getting coin data stats: {e}")
-            return {
-                'total_coins': 0,
-                'last_update': None,
-                'bullish_count': 0,
-                'bearish_count': 0,
-                'neutral_count': 0
-            }
-    
-    def search_coin_data(self, search_term: str, limit: int = 50):
-        """Search coin data by symbol."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute('''
-                    SELECT symbol, futures_symbol, current_price, ema_50, price_diff,
-                           diff_percentage, volume_24h, trend, last_updated
-                    FROM coin_data 
-                    WHERE symbol LIKE ? OR futures_symbol LIKE ?
-                    ORDER BY symbol
-                    LIMIT ?
-                ''', (f'%{search_term}%', f'%{search_term}%', limit))
-                
-                rows = cursor.fetchall()
-                
-                # Convert to list of dictionaries
-                columns = ['symbol', 'futures_symbol', 'current_price', 'ema_50', 'price_diff',
-                          'diff_percentage', 'volume_24h', 'trend', 'last_updated']
-                
-                coin_data_list = []
-                for row in rows:
-                    coin_dict = dict(zip(columns, row))
-                    if coin_dict['last_updated']:
-                        coin_dict['timestamp'] = coin_dict['last_updated']
-                    coin_data_list.append(coin_dict)
-                
-                return coin_data_list
-                
-        except sqlite3.Error as e:
-            logger.error(f"Error searching coin data: {e}")
-            return []
-
-# Singleton instance
-_db_instance = None
-
-def get_database() -> TradingDatabase:
-    """Get singleton database instance."""
-    global _db_instance
-    if _db_instance is None:
-        _db_instance = TradingDatabase()
-    return _db_instance
+            ]
+        }
+        
+        sample_summary = {
+            "total_balance": 110.75,
+            "available_balance": 100.505,
+            "total_locked": 10.251
+        }
+        
+        success = manager.store_wallet_balance(sample_wallet, sample_summary)
+        if success:
+            print("✅ Sample data stored successfully!")
+        else:
+            print("❌ Failed to store sample data")
+            
+        # Test retrieving data
+        history = manager.get_wallet_history(currency="USDT", hours=1)
+        print(f"📊 Retrieved {len(history)} USDT balance records")
+        
+        latest = manager.get_latest_balances()
+        print(f"💰 Latest balances for {len(latest)} currencies")
+        
+    except Exception as e:
+        print(f"❌ Database test failed: {e}")
